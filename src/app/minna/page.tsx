@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toHiragana } from "wanakana";
 import {
@@ -26,6 +26,7 @@ import {
   db,
   enqueueShadowing,
   ensureSeeded,
+  getAppSettings,
   getLearningSummary,
   getMinnaProgressMap,
   mineCardToSrs,
@@ -71,16 +72,20 @@ export default function MinnaPage() {
   const [noteSavedNotice, setNoteSavedNotice] = useState(false);
   const [playingKaiwaTurn, setPlayingKaiwaTurn] = useState<number | null>(null);
 
+  const initialLessonAppliedRef = useRef(false);
+
   const fetchMinnaData = useCallback(async (lessonNum: number) => {
     await ensureSeeded();
-    const [pMap, summary, allCards] = await Promise.all([
+    const [pMap, summary, allCards, settings] = await Promise.all([
       getMinnaProgressMap(),
       getLearningSummary(),
       db.cards.toArray(),
+      getAppSettings(),
     ]);
     const chapterTag = `บทที่ ${lessonNum}`;
     return {
       pMap,
+      settings,
       knownFronts: summary.knownFronts,
       customCards: allCards.filter(
         (c) => c.tags.includes("Minna") && c.tags.includes(chapterTag)
@@ -104,6 +109,17 @@ export default function MinnaPage() {
     let active = true;
     void fetchMinnaData(activeLessonNum).then((data) => {
       if (!active) return;
+      if (!initialLessonAppliedRef.current) {
+        initialLessonAppliedRef.current = true;
+        if (
+          Object.keys(data.pMap).length === 0 &&
+          data.settings.learnerLevel !== "N5" &&
+          activeLessonNum === 1
+        ) {
+          setActiveLessonNum(26);
+          return;
+        }
+      }
       setProgressMap(data.pMap);
       setKnownFronts(data.knownFronts);
       setCustomLessonCards(data.customCards);

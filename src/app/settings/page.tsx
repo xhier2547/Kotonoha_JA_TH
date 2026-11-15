@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Download, Save, Upload } from "lucide-react";
+import Link from "next/link";
+import { Check, Download, Save, Sparkles, Upload } from "lucide-react";
 import {
   DEFAULT_SETTINGS,
   exportDatabaseJson,
@@ -11,7 +12,14 @@ import {
 } from "@/lib/db";
 import { getJapaneseVoices, speakJapanese } from "@/lib/speech";
 import { broadcastThemePreference } from "@/lib/theme";
-import type { AiProvider, AppSettings, JlptLevel, ThemePreference } from "@/types/learning";
+import { DAILY_TIME_OPTIONS, STUDY_FOCUS_OPTIONS } from "@/lib/studyPlan";
+import type {
+  AiProvider,
+  AppSettings,
+  JlptLevel,
+  StudyGoalFocus,
+  ThemePreference,
+} from "@/types/learning";
 
 export default function SettingsPage() {
   const [form, setForm] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -179,6 +187,56 @@ export default function SettingsPage() {
                 <option value="off">ซ่อนทั้งหมด</option>
               </select>
             </label>
+
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium block">เวลาเรียนต่อวัน (แผนรายวัน)</span>
+              <select
+                value={form.dailyMinutes ?? 20}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    dailyMinutes: Number(e.target.value) || 20,
+                  })
+                }
+                className="w-full px-3.5 py-2 rounded-xl border border-border bg-background"
+              >
+                {DAILY_TIME_OPTIONS.map((opt) => (
+                  <option key={opt.minutes} value={opt.minutes}>
+                    {opt.label} — {opt.subtitle}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium block">เป้าหมายหลักในการฝึก</span>
+              <select
+                value={form.studyGoalFocus ?? "balanced"}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    studyGoalFocus: e.target.value as StudyGoalFocus,
+                  })
+                }
+                className="w-full px-3.5 py-2 rounded-xl border border-border bg-background"
+              >
+                {STUDY_FOCUS_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="pt-1">
+            <Link
+              href="/?onboarding=1"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline underline-offset-2"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>ทำแบบสอบถามประเมินระดับและจัดแผนใหม่อีกครั้ง</span>
+            </Link>
           </div>
         </section>
 

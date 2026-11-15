@@ -355,23 +355,40 @@ export default function KaiwaPage() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const [s, customList, savedMsgs] = await Promise.all([
+      const [s, customList] = await Promise.all([
         getAppSettings(),
         getCustomScenarios(),
-        getKaiwaHistory(SCENARIOS[0].id),
       ]);
+      const targetScenarioLevel =
+        s.learnerLevel === "N4"
+          ? "N4"
+          : s.learnerLevel === "N3" || s.learnerLevel === "N2" || s.learnerLevel === "N1"
+            ? "N3"
+            : "N5";
+      const initialScenario =
+        SCENARIOS.find((item) => item.level === targetScenarioLevel) ?? SCENARIOS[0];
+      const savedMsgs = await getKaiwaHistory(initialScenario.id);
       if (!active) return;
       setSettings(s);
       setCustomScenarios(customList.map(toScenarioFromCustom));
-      loadedHistoryIdRef.current = SCENARIOS[0].id;
+      setScenario(initialScenario);
+      setShowFurigana(s.furiganaMode !== "off");
+      loadedHistoryIdRef.current = initialScenario.id;
       if (savedMsgs.length > 0) {
         setMessages(savedMsgs);
       } else {
-        const openId = `open-${SCENARIOS[0].id}`;
-        void fetchJapaneseTokens(SCENARIOS[0].openingJp).then((tokens) => {
+        const openMsg: ChatMsg = {
+          id: `open-${initialScenario.id}`,
+          role: "assistant",
+          textJp: initialScenario.openingJp,
+          reading: initialScenario.openingReading,
+          textTh: initialScenario.openingTh,
+        };
+        setMessages([openMsg]);
+        void fetchJapaneseTokens(initialScenario.openingJp).then((tokens) => {
           if (!active || tokens.length === 0) return;
           setMessages((prev) =>
-            prev.map((m) => (m.id === openId ? { ...m, tokens } : m))
+            prev.map((m) => (m.id === openMsg.id ? { ...m, tokens } : m))
           );
         });
       }

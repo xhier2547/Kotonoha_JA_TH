@@ -23,6 +23,7 @@ import {
   getUserDisplayName,
   isSupabaseConfigured,
 } from "@/lib/supabase";
+import { getAppSettings } from "@/lib/db";
 import { pullProgressFromCloud, pushProgressToCloud } from "@/lib/cloudSync";
 import { CrestSealIcon } from "@/components/LuxuryIcons";
 
@@ -107,8 +108,14 @@ export default function AuthPage() {
       ) {
         oauthSyncedRef.current = true;
         void pullProgressFromCloud("merge")
-          .then((pulled) => {
+          .then(async (pulled) => {
             if (!active) return;
+            const latest = await getAppSettings();
+            if (!active) return;
+            if (!latest.onboardingCompleted) {
+              router.push("/?onboarding=1");
+              return;
+            }
             setMessage(
               pulled.hasCloudData
                 ? "เข้าสู่ระบบและรวมข้อมูลจาก Cloud + เครื่องนี้เรียบร้อยแล้ว!"
@@ -125,7 +132,7 @@ export default function AuthPage() {
       active = false;
       sub.subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   const handleGoogleAuth = async (intent: "signin" | "link") => {
     setErrorMsg(null);
@@ -204,6 +211,11 @@ export default function AuthPage() {
 
         if (data.session) {
           await pushProgressToCloud();
+          const latest = await getAppSettings();
+          if (!latest.onboardingCompleted) {
+            router.push("/?onboarding=1");
+            return;
+          }
           setMessage("สมัครสมาชิกและซิงค์ข้อมูลการเรียนเริ่มต้นขึ้น Cloud เรียบร้อยแล้ว!");
         } else {
           setMessage(
@@ -218,6 +230,11 @@ export default function AuthPage() {
         if (error) throw error;
 
         const pulled = await pullProgressFromCloud("merge");
+        const latest = await getAppSettings();
+        if (!latest.onboardingCompleted) {
+          router.push("/?onboarding=1");
+          return;
+        }
         setMessage(
           pulled.hasCloudData
             ? "เข้าสู่ระบบและรวมข้อมูลจาก Cloud + เครื่องนี้เรียบร้อยแล้ว!"

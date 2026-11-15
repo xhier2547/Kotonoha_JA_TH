@@ -113,6 +113,8 @@ export type AiProvider = "offline" | "gemini" | "openai";
 
 export type ThemePreference = "system" | "light" | "dark";
 
+export type StudyGoalFocus = "balanced" | "jlpt" | "conversation" | "reading";
+
 export interface AppSettings {
   id: "user_settings";
   desiredRetention: number;
@@ -125,6 +127,10 @@ export interface AppSettings {
   aiModel: string;
   learnerLevel: JlptLevel;
   theme?: ThemePreference;
+  dailyMinutes?: number;
+  studyGoalFocus?: StudyGoalFocus;
+  onboardingCompleted?: boolean;
+  onboardingCompletedAt?: string;
 }
 
 export interface TokenizedWord {

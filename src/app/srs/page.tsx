@@ -61,6 +61,7 @@ import {
   parseDelimitedDeck,
   type ImportedCardRow,
 } from "@/lib/deckPortability";
+import { sortFreshCardsByLevel } from "@/lib/studyPlan";
 import type { CardType, SrsCardRecord } from "@/types/learning";
 
 type SrsTab = "review" | "curve" | "conjugation" | "particles" | "deck";
@@ -148,9 +149,10 @@ export default function SrsPage() {
       .filter((c) => c.fsrs.reps > 0 && c.dueAtMs <= nowMs)
       .sort((a, b) => a.dueAtMs - b.dueAtMs);
 
-    const fresh = filtered
-      .filter((c) => c.fsrs.reps === 0)
-      .slice(0, tagFilter ? 50 : settings.dailyNewCards);
+    const fresh = sortFreshCardsByLevel(
+      filtered.filter((c) => c.fsrs.reps === 0),
+      settings.learnerLevel
+    ).slice(0, tagFilter ? 50 : settings.dailyNewCards);
 
     setRetention(settings.desiredRetention);
     setAllCards(cards);
@@ -190,9 +192,10 @@ export default function SrsPage() {
         .filter((c) => c.fsrs.reps > 0 && c.dueAtMs <= nowMs)
         .sort((a, b) => a.dueAtMs - b.dueAtMs);
 
-      const fresh = filtered
-        .filter((c) => c.fsrs.reps === 0)
-        .slice(0, tagFilter ? 50 : settings.dailyNewCards);
+      const fresh = sortFreshCardsByLevel(
+        filtered.filter((c) => c.fsrs.reps === 0),
+        settings.learnerLevel
+      ).slice(0, tagFilter ? 50 : settings.dailyNewCards);
 
       setRetention(settings.desiredRetention);
       setAllCards(cards);

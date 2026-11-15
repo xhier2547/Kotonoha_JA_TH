@@ -27,6 +27,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   aiModel: "gemini-3.8-flash",
   learnerLevel: "N5",
   theme: "system",
+  dailyMinutes: 20,
+  studyGoalFocus: "balanced",
+  onboardingCompleted: false,
 };
 
 class KotonohaDatabase extends Dexie {
@@ -197,12 +200,16 @@ export async function getAppSettings(): Promise<AppSettings> {
   await ensureSeeded();
   const s = await db.settings.get("user_settings");
   if (!s) return DEFAULT_SETTINGS;
-  if (s.aiProvider === "gemini" && (!s.aiModel || s.aiModel === "gemini-2.5-flash")) {
-    const migrated = { ...s, aiModel: "gemini-3.8-flash" };
+  const normalized: AppSettings = { ...DEFAULT_SETTINGS, ...s };
+  if (
+    normalized.aiProvider === "gemini" &&
+    (!normalized.aiModel || normalized.aiModel === "gemini-2.5-flash")
+  ) {
+    const migrated = { ...normalized, aiModel: "gemini-3.8-flash" };
     await db.settings.put(migrated);
     return migrated;
   }
-  return s;
+  return normalized;
 }
 
 export const DB_MUTATED_EVENT = "kotonoha-db-mutated";

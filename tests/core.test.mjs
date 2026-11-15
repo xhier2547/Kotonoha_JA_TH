@@ -39,6 +39,11 @@ const {
 } = require("../.test-dist/lib/weaknessAnalyzer.js");
 const { STROKE_ORDER_MAP } = require("../.test-dist/data/strokeOrders.js");
 const { validateSupabaseEnv } = require("../.test-dist/lib/supabaseConfig.js");
+const {
+  buildSettingsFromOnboarding,
+  computeDailyStudyPlan,
+  sortFreshCardsByLevel,
+} = require("../.test-dist/lib/studyPlan.js");
 
 // Check for Unicode emojis while allowing standard JLPT `★` (U+2605) sentence-ordering marker
 const EMOJI_REGEX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{2604}\u{2606}-\u{27BF}]/u;
@@ -360,4 +365,83 @@ test("Supabase env validation prevents invalid URL crash and blocks sb_secret_ i
       normalizedUrl: "https://example.supabase.co",
     }
   );
+});
+
+test("Onboarding study plan computes real settings, exact time blocks, and level-sorted SRS queue", async () => {
+  const baseSettings = {
+    id: "user_settings",
+    desiredRetention: 0.9,
+    dailyNewCards: 15,
+    speechRate: 0.95,
+    preferredVoiceName: "",
+    furiganaMode: "unknown",
+    aiProvider: "offline",
+    apiKey: "",
+    aiModel: "gemini-3.8-flash",
+    learnerLevel: "N5",
+    theme: "system",
+  };
+
+  const n3Intensive = buildSettingsFromOnboarding(
+    {
+      proficiency: "n3",
+      dailyMinutes: 30,
+      studyGoalFocus: "jlpt",
+    },
+    baseSettings,
+    "2026-11-16T05:00:00.000Z"
+  );
+
+  assert.equal(n3Intensive.learnerLevel, "N3");
+  assert.equal(n3Intensive.dailyMinutes, 30);
+  assert.equal(n3Intensive.dailyNewCards, 25);
+  assert.equal(n3Intensive.studyGoalFocus, "jlpt");
+  assert.equal(n3Intensive.onboardingCompleted, true);
+
+  const plan = computeDailyStudyPlan(n3Intensive, { dueCount: 4, kanaMasteredCount: 0 });
+  assert.equal(plan.dailyMinutes, 30);
+  assert.equal(
+    plan.blocks.reduce((sum, b) => sum + b.minutes, 0),
+    30
+  );
+  assert.equal(plan.blocks.some((b) => b.href === "/jlpt"), true);
+  // N3 user should NOT be forced into Kana Dojo first
+  assert.equal(plan.blocks.some((b) => b.href === "/kana"), false);
+
+  const zeroBeginner = buildSettingsFromOnboarding(
+    {
+      proficiency: "beginner_zero",
+      dailyMinutes: 10,
+      studyGoalFocus: "balanced",
+    },
+    baseSettings
+  );
+  assert.equal(zeroBeginner.furiganaMode, "all");
+  assert.equal(zeroBeginner.dailyNewCards, 8);
+  const beginnerPlan = computeDailyStudyPlan(zeroBeginner, { dueCount: 0, kanaMasteredCount: 0 });
+  assert.equal(beginnerPlan.blocks.some((b) => b.href === "/kana"), true);
+
+  const cN5 = { ...(await createInitialFsrsCard("c-n5", 0.9)), cardId: "c-n5" };
+  const makeCard = (id, tag, fsrs) => ({
+    id,
+    cardType: "vocab",
+    front: id,
+    reading: id,
+    meaningTh: id,
+    meaningEn: id,
+    tags: [tag],
+    createdAt: "2026-11-16T00:00:00.000Z",
+    dueAtMs: 0,
+    fsrs,
+  });
+
+  const sortedForN3 = sortFreshCardsByLevel(
+    [
+      makeCard("a", "N5", cN5),
+      makeCard("b", "N1", cN5),
+      makeCard("c", "N3", cN5),
+    ],
+    "N3"
+  );
+  assert.equal(sortedForN3[0].id, "c");
 });

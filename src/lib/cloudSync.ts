@@ -119,12 +119,27 @@ function mergeSnapshots(
     if (!prev || h.updatedAt > prev.updatedAt) kaiwaById.set(h.id, h);
   }
 
+  const localSetting = local.settings[0];
+  const cloudSetting = cloud.settings?.[0];
+  let mergedSettings = local.settings.length > 0 ? local.settings : (cloud.settings ?? []);
+  if (cloudSetting?.onboardingCompleted && !localSetting?.onboardingCompleted) {
+    mergedSettings = [
+      {
+        ...cloudSetting,
+        // Preserve any BYOK AI key entered locally while adopting cloud learning preferences
+        aiProvider: localSetting?.apiKey ? localSetting.aiProvider : cloudSetting.aiProvider,
+        apiKey: localSetting?.apiKey || cloudSetting.apiKey || "",
+        aiModel: localSetting?.apiKey ? localSetting.aiModel : cloudSetting.aiModel,
+      },
+    ];
+  }
+
   return {
     exportedAt: new Date().toISOString(),
     version: 4,
     cards: Array.from(cardByFront.values()),
     reviewLogs: Array.from(logByKey.values()),
-    settings: local.settings.length > 0 ? local.settings : (cloud.settings ?? []),
+    settings: mergedSettings,
     kanaMastery: Array.from(kanaMap.values()),
     passages: Array.from(passageById.values()),
     kaiwaHistory: Array.from(kaiwaById.values()),

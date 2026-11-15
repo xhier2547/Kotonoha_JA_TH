@@ -97,7 +97,10 @@ export default function ReaderPage() {
       setKnownFronts(summary.knownFronts);
       setFuriganaMode(settings.furiganaMode);
       if (allPassages.length > 0) {
-        setActivePassage((prev) => prev ?? allPassages[0]);
+        const matchedPassage =
+          allPassages.find((p) => p.level === settings.learnerLevel) ??
+          allPassages[0];
+        setActivePassage((prev) => prev ?? matchedPassage);
       }
     })();
     return () => {

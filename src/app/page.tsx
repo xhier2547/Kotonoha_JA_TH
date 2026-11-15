@@ -10,10 +10,12 @@ import {
   BookOpen,
   Brain,
   CheckCircle2,
+  Clock,
   Flame,
   Languages,
   MessageCircle,
   Mic,
+  SlidersHorizontal,
   Target,
 } from "lucide-react";
 import {
@@ -24,7 +26,10 @@ import {
   getStudyAnalytics,
   type StudyAnalyticsData,
 } from "@/lib/db";
+import { getAuthenticatedUser, getUserDisplayName } from "@/lib/supabase";
+import { computeDailyStudyPlan } from "@/lib/studyPlan";
 import { MemoryCurvePanel } from "@/components/MemoryCurvePanel";
+import { OnboardingModal } from "@/components/OnboardingModal";
 import { StudyAnalyticsPanel } from "@/components/StudyAnalyticsPanel";
 import { WeaknessCoachPanel } from "@/components/WeaknessCoachPanel";
 import {
@@ -59,11 +64,13 @@ export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<StudyAnalyticsData | null>(null);
   const [retentionTarget, setRetentionTarget] = useState(0.9);
   const [nowMs, setNowMs] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [accountName, setAccountName] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     void (async () => {
-      const [res, allCards, allLogs, attempts, loadedSettings, studyStats] =
+      const [res, allCards, allLogs, attempts, loadedSettings, studyStats, authUser] =
         await Promise.all([
           getLearningSummary(),
           db.cards.toArray(),
@@ -71,6 +78,7 @@ export default function DashboardPage() {
           getJlptAttempts(),
           getAppSettings(),
           getStudyAnalytics(84),
+          getAuthenticatedUser(),
         ]);
       if (!active) return;
       setSummary({
@@ -90,11 +98,26 @@ export default function DashboardPage() {
       setAnalytics(studyStats);
       setRetentionTarget(loadedSettings.desiredRetention);
       setNowMs(Date.now());
+      setAccountName(authUser ? getUserDisplayName(authUser) : null);
+
+      const requestedOnboarding =
+        typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("onboarding") === "1";
+      if (requestedOnboarding || (authUser && !loadedSettings.onboardingCompleted)) {
+        setShowOnboarding(true);
+      }
     })();
     return () => {
       active = false;
     };
   }, []);
+
+  const studyPlan = settings
+    ? computeDailyStudyPlan(settings, {
+        dueCount: summary?.dueCount,
+        kanaMasteredCount: summary?.kanaMasteredCount,
+      })
+    : null;
 
   const nextAction = (() => {
     if (!summary) {
@@ -108,12 +131,13 @@ export default function DashboardPage() {
     if (summary.dueCount > 0) {
       return {
         title: `มีการ์ดรอทบทวน ${summary.dueCount} ใบวันนี้`,
-        desc: "การทบทวนตามเวลาที่ FSRS-7 คำนวณไว้ คือวิธีจำคำศัพท์ให้แม่นที่สุดโดยใช้เวลาน้อยที่สุด",
+        desc: `การทบทวนตามเวลาที่ FSRS-7 คำนวณไว้ (เป้าหมายจำได้ ${Math.round((settings?.desiredRetention ?? 0.9) * 100)}%) คือวิธีจำแม่นที่สุด`,
         href: "/srs",
         cta: "เริ่มทบทวน FSRS ทันที",
       };
     }
-    if (summary.kanaMasteredCount < 25) {
+    const isBeginnerN5 = (settings?.learnerLevel ?? "N5") === "N5";
+    if (isBeginnerN5 && summary.kanaMasteredCount < 25) {
       return {
         title: "เริ่มต้นที่รากฐาน: Kana & ระบบเสียง",
         desc: "ฝึกจำ Hiragana/Katakana ด้วยภาพจำและเกมพิมพ์ตอบเร็ว พร้อมเข้าใจ Pitch Accent ตั้งแต่วันแรก",
@@ -121,16 +145,32 @@ export default function DashboardPage() {
         cta: "เข้าสู่ Kana Dojo",
       };
     }
+    if (settings?.studyGoalFocus === "jlpt") {
+      return {
+        title: `ซ้อมข้อสอบ JLPT ${settings.learnerLevel} ตามเป้าหมายของคุณ`,
+        desc: "ทำแบบทดสอบจับเวลาจริงพร้อมคลิกเก็บคำที่ไม่รู้เข้าคลัง FSRS ได้ทันที",
+        href: "/jlpt",
+        cta: `ทำข้อสอบ JLPT ${settings.learnerLevel}`,
+      };
+    }
+    if (settings?.studyGoalFocus === "conversation") {
+      return {
+        title: "ฝึกพูดโต้ตอบ & ฟังในสถานการณ์จริง",
+        desc: "เข้าสู่ AI Kaiwa หรือ Shadowing เพื่อพัฒนาความคล่องในการตอบโต้ทันที",
+        href: "/kaiwa",
+        cta: "เปิด AI Kaiwa",
+      };
+    }
     if (summary.learnedCount < 15) {
       return {
-        title: "สะสมคลังคำศัพท์และคันจิแกนกลาง",
-        desc: `ยังมีการ์ดใหม่อีก ${summary.newCount} ใบที่พร้อมให้เรียนรู้ พร้อมฝึกผันกริยาให้คล่องปาก`,
+        title: `สะสมคลังคำศัพท์และคันจิระดับ ${settings?.learnerLevel ?? "N5"}`,
+        desc: `ยังมีการ์ดใหม่อีก ${summary.newCount} ใบ (จัดลำดับตามระดับ ${settings?.learnerLevel ?? "N5"} วันละ ${settings?.dailyNewCards ?? 15} ใบ)`,
         href: "/srs",
         cta: "เรียนการ์ดใหม่ (FSRS)",
       };
     }
     return {
-      title: "ฝึกอ่าน i+1 และฝึกพูดโต้ตอบธรรมชาติ",
+      title: `ฝึกอ่าน i+1 ระดับ ${settings?.learnerLevel ?? "N5"} และพูดโต้ตอบ`,
       desc: "อ่านบทความจริง ตัดคำอัตโนมัติด้วย Kuromoji แล้วฝึก Shadowing / AI Kaiwa เพื่อให้พูดคล่อง!",
       href: "/reader",
       cta: "เปิด Immersion Reader",
@@ -285,6 +325,85 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* Personalized Daily Study Plan */}
+      {studyPlan && (
+        <section className="rounded-2xl border border-primary/25 bg-surface/95 p-5 sm:p-6 space-y-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold text-primary">
+                <Clock className="w-3.5 h-3.5" />
+                <span>
+                  แผนการเรียนส่วนตัววันนี้ • {studyPlan.dailyMinutes} นาที/วัน • ระดับ{" "}
+                  {studyPlan.learnerLevel} ({studyPlan.focusLabelTh})
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-foreground/70">
+                <span>
+                  เป้าทบทวนวันนี้:{" "}
+                  <strong className="text-foreground">
+                    {summary?.todayReviews ?? 0} / {studyPlan.reviewTargetCount}
+                  </strong>{" "}
+                  ครั้ง
+                </span>
+                <span>•</span>
+                <span>การ์ดใหม่ {studyPlan.dailyNewCards} ใบ/วัน</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowOnboarding(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-background hover:bg-surface-muted text-xs font-medium self-start sm:self-auto cursor-pointer"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+              <span>ปรับระดับ &amp; เวลาเรียน</span>
+            </button>
+          </div>
+
+          <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-500"
+              style={{
+                width: `${Math.min(
+                  100,
+                  Math.round(
+                    ((summary?.todayReviews ?? 0) /
+                      Math.max(1, studyPlan.reviewTargetCount)) *
+                      100
+                  )
+                )}%`,
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            {studyPlan.blocks.map((block, idx) => (
+              <Link
+                key={block.title}
+                href={block.href}
+                className="group rounded-xl bg-background hover:bg-surface-muted/70 p-4 border border-border transition-colors flex flex-col justify-between gap-2.5"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 text-xs font-semibold text-primary mb-1">
+                    <span>
+                      ช่วงที่ {idx + 1} · {block.minutes} นาที
+                    </span>
+                  </div>
+                  <div className="font-bold text-sm">{block.title}</div>
+                  <p className="text-foreground/70 text-xs leading-relaxed mt-1">
+                    {block.detail}
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-1 text-xs font-semibold text-primary group-hover:translate-x-0.5 transition-transform">
+                  <span>{block.cta}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Memory Curve + Flashcard Schedule Widget */}
       <div className="animate-fade-up stagger-2">
         <MemoryCurvePanel
@@ -412,30 +531,20 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Study Routine Guide */}
-      <section className="rounded-2xl border border-border bg-surface-muted/50 p-5 sm:p-6 space-y-3">
-        <h2 className="text-base font-bold">ตารางฝึกประจำวันแนะนำ (วันละ 30–45 นาที)</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-          <div className="rounded-xl bg-surface p-4 border border-border">
-            <div className="font-semibold text-primary mb-1">1. เช้า / ก่อนเริ่ม (10-15 นาที)</div>
-            <p className="text-foreground/75 text-xs leading-relaxed">
-              เคลียร์การ์ด FSRS ที่ค้างอยู่ + เรียนคำศัพท์/คันจิใหม่ 10-15 ใบ เพื่อรักษา Retention 90%
-            </p>
-          </div>
-          <div className="rounded-xl bg-surface p-4 border border-border">
-            <div className="font-semibold text-matcha mb-1">2. กลางวัน (10-15 นาที)</div>
-            <p className="text-foreground/75 text-xs leading-relaxed">
-              อ่านบทความ <span className="font-mono">i+1</span> ใน Immersion Reader ปิด Furigana คำที่รู้แล้ว และกด Mine ประโยคใหม่เข้าคลัง
-            </p>
-          </div>
-          <div className="rounded-xl bg-surface p-4 border border-border">
-            <div className="font-semibold text-accent mb-1">3. เย็น / ก่อนนอน (10-15 นาที)</div>
-            <p className="text-foreground/75 text-xs leading-relaxed">
-              ฝึกผันกริยา 2 นาที + Shadowing อัดเสียงเทียบเจ้าของภาษา + คุย Roleplay ใน AI Kaiwa
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* Onboarding Modal for First Login / Plan Customization */}
+      {settings && (
+        <OnboardingModal
+          open={showOnboarding}
+          initialSettings={settings}
+          userLabel={accountName}
+          onClose={() => setShowOnboarding(false)}
+          onSaved={(updated) => {
+            setSettings(updated);
+            setRetentionTarget(updated.desiredRetention);
+            setShowOnboarding(false);
+          }}
+        />
+      )}
     </div>
   );
 }

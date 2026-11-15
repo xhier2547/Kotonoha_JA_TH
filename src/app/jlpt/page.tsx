@@ -151,14 +151,19 @@ export default function JlptPage() {
     let active = true;
     void (async () => {
       await ensureSeeded();
-      const [pastAttempts, summary] = await Promise.all([
+      const [pastAttempts, summary, settings] = await Promise.all([
         getJlptAttempts(),
         getLearningSummary(),
+        getAppSettings(),
       ]);
       if (!active) return;
       setAttempts(pastAttempts);
       setKnownFronts(summary.knownFronts);
       setDrafts(readJlptDrafts());
+      if (LEVELS.includes(settings.learnerLevel)) {
+        setSelectedLevel(settings.learnerLevel);
+      }
+      setShowFurigana(settings.furiganaMode === "all");
     })();
     return () => {
       active = false;
