@@ -573,6 +573,13 @@ export default function AuthPage() {
           </form>
         </section>
       )}
+
+      <div className="text-center text-xs text-foreground/60">
+        การเข้าสู่ระบบหรือใช้งาน Cloud Sync ถือว่าคุณรับทราบ{" "}
+        <Link href="/privacy" className="text-primary underline underline-offset-2 hover:text-primary/80">
+          นโยบายความเป็นส่วนตัว (Privacy Policy)
+        </Link>
+      </div>
     </div>
   );
 }
