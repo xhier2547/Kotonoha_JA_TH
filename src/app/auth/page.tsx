@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
@@ -20,12 +20,36 @@ import {
 import {
   getSupabaseClient,
   getSupabaseConfigIssue,
+  getUserDisplayName,
   isSupabaseConfigured,
 } from "@/lib/supabase";
 import { pullProgressFromCloud, pushProgressToCloud } from "@/lib/cloudSync";
 import { CrestSealIcon } from "@/components/LuxuryIcons";
 
 type AuthMode = "signin" | "signup";
+
+function GoogleGIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.745 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-8.97z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.37 24 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.37 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"
+      />
+    </svg>
+  );
+}
 
 export default function AuthPage() {
   const router = useRouter();
@@ -39,9 +63,12 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const manualAuthRef = useRef(false);
+  const oauthSyncedRef = useRef(false);
 
   useEffect(() => {
     const client = getSupabaseClient();
@@ -52,10 +79,46 @@ export default function AuthPage() {
       if (!active) return;
       setUser(data.user ?? null);
       setLoadingUser(false);
+
+      if (typeof window !== "undefined") {
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const oauthError =
+          searchParams.get("error_description") ||
+          hashParams.get("error_description") ||
+          searchParams.get("error") ||
+          hashParams.get("error");
+        if (oauthError) {
+          setErrorMsg(`ไม่สามารถเข้าสู่ระบบด้วย Google ได้: ${oauthError}`);
+        }
+      }
     });
 
-    const { data: sub } = client.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: sub } = client.auth.onAuthStateChange((event, session) => {
+      const nextUser = session?.user ?? null;
+      setUser(nextUser);
+
+      // Auto-merge once when returning from Google OAuth redirect.
+      if (
+        event === "SIGNED_IN" &&
+        nextUser &&
+        !manualAuthRef.current &&
+        !oauthSyncedRef.current
+      ) {
+        oauthSyncedRef.current = true;
+        void pullProgressFromCloud("merge")
+          .then((pulled) => {
+            if (!active) return;
+            setMessage(
+              pulled.hasCloudData
+                ? "เข้าสู่ระบบและรวมข้อมูลจาก Cloud + เครื่องนี้เรียบร้อยแล้ว!"
+                : "เข้าสู่ระบบและอัปโหลดความคืบหน้าของคุณขึ้น Cloud เรียบร้อยแล้ว!"
+            );
+          })
+          .catch(() => {
+            // Keep session active; user can retry sync manually if needed
+          });
+      }
     });
 
     return () => {
@@ -63,6 +126,56 @@ export default function AuthPage() {
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  const handleGoogleAuth = async (intent: "signin" | "link") => {
+    setErrorMsg(null);
+    setMessage(null);
+    const client = getSupabaseClient();
+    if (!client) {
+      setErrorMsg("ยังไม่ได้ตั้งค่า NEXT_PUBLIC_SUPABASE_URL และ ANON_KEY");
+      return;
+    }
+
+    setOauthLoading(true);
+    try {
+      const redirectTo =
+        typeof window !== "undefined" ? `${window.location.origin}/auth` : undefined;
+
+      if (intent === "link") {
+        const { error } = await client.auth.linkIdentity({
+          provider: "google",
+          options: { redirectTo },
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await client.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo,
+            queryParams: {
+              access_type: "offline",
+              prompt: "select_account",
+            },
+          },
+        });
+        if (error) throw error;
+      }
+    } catch (err) {
+      const rawMsg = err instanceof Error ? err.message : "";
+      if (rawMsg.toLowerCase().includes("provider is not enabled")) {
+        setErrorMsg(
+          "ยังไม่ได้เปิดใช้งาน Google Provider ใน Supabase Dashboard (Authentication -> Sign In / Providers -> Google)"
+        );
+      } else if (rawMsg.toLowerCase().includes("manual linking")) {
+        setErrorMsg(
+          "หากต้องการเชื่อม Google เข้ากับบัญชีอีเมลเดิม กรุณาเปิด Manual Linking ใน Supabase Auth Settings หรือเข้าสู่ระบบด้วยปุ่ม Google โดยตรงครับ"
+        );
+      } else {
+        setErrorMsg(rawMsg || "ไม่สามารถเชื่อมต่อบัญชี Google ได้");
+      }
+      setOauthLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +187,7 @@ export default function AuthPage() {
       return;
     }
 
+    manualAuthRef.current = true;
     setSubmitting(true);
     try {
       if (mode === "signup") {
@@ -113,6 +227,7 @@ export default function AuthPage() {
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการยืนยันตัวตน");
     } finally {
+      manualAuthRef.current = false;
       setSubmitting(false);
     }
   };
@@ -148,6 +263,11 @@ export default function AuthPage() {
     await client.auth.signOut();
     setMessage("ออกจากระบบแล้ว — คุณยังใช้งานโหมด Guest ในเครื่องนี้ต่อได้ทันที");
   };
+
+  const hasGoogleLinked = Boolean(
+    user?.identities?.some((id) => id.provider === "google") ||
+      user?.app_metadata?.provider === "google"
+  );
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -248,25 +368,45 @@ export default function AuthPage() {
                 <UserCheck className="w-6 h-6" strokeWidth={1.6} />
               </div>
               <div>
-                <div className="text-sm font-bold">
-                  {(user.user_metadata?.display_name as string) || user.email}
-                </div>
+                <div className="text-sm font-bold">{getUserDisplayName(user)}</div>
                 <div className="text-xs text-foreground/65">{user.email}</div>
-                <div className="inline-flex items-center gap-1 text-[11px] text-matcha font-medium mt-1">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>เชื่อมต่อ Cloud Sync อัตโนมัติแล้ว</span>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className="inline-flex items-center gap-1 text-[11px] text-matcha font-medium">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>เชื่อมต่อ Cloud Sync อัตโนมัติแล้ว</span>
+                  </span>
+                  {hasGoogleLinked && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-background text-[11px] font-medium">
+                      <GoogleGIcon className="w-3 h-3" />
+                      <span>Google</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => void handleSignOut()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border hover:bg-surface-muted text-xs font-medium text-foreground/80 cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>ออกจากระบบ</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {!hasGoogleLinked && (
+                <button
+                  type="button"
+                  disabled={oauthLoading}
+                  onClick={() => void handleGoogleAuth("link")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-background hover:bg-surface-muted text-xs font-medium disabled:opacity-50 cursor-pointer"
+                >
+                  <GoogleGIcon className="w-3.5 h-3.5" />
+                  <span>{oauthLoading ? "กำลังเชื่อมต่อ..." : "เชื่อม Google"}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => void handleSignOut()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border hover:bg-surface-muted text-xs font-medium text-foreground/80 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>ออกจากระบบ</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-border/80">
@@ -339,6 +479,28 @@ export default function AuthPage() {
               <CrestSealIcon className="w-3.5 h-3.5 text-primary" />
               <span>Offline-First + Sync</span>
             </span>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              type="button"
+              disabled={oauthLoading || submitting || !configured}
+              onClick={() => void handleGoogleAuth("signin")}
+              className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border border-border bg-background hover:bg-surface-muted text-sm font-medium disabled:opacity-50 cursor-pointer transition-colors"
+            >
+              <GoogleGIcon className="w-4 h-4 shrink-0" />
+              <span>
+                {oauthLoading ? "กำลังเปิดหน้า Google..." : "ดำเนินการต่อด้วย Google"}
+              </span>
+            </button>
+
+            <div className="relative flex items-center py-1">
+              <div className="flex-grow border-t border-border/80" />
+              <span className="mx-3 shrink-0 text-[11px] text-foreground/50">
+                หรือใช้อีเมลและรหัสผ่าน
+              </span>
+              <div className="flex-grow border-t border-border/80" />
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

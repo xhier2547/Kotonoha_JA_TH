@@ -39,3 +39,15 @@ export async function getAuthenticatedUser(): Promise<User | null> {
   const { data } = await client.auth.getUser();
   return data.user ?? null;
 }
+
+/** Resolves a readable display name across email signup and OAuth providers (e.g. Google). */
+export function getUserDisplayName(user: User): string {
+  const meta = user.user_metadata as Record<string, unknown> | undefined;
+  const raw =
+    (typeof meta?.display_name === "string" && meta.display_name) ||
+    (typeof meta?.full_name === "string" && meta.full_name) ||
+    (typeof meta?.name === "string" && meta.name) ||
+    user.email ||
+    "สมาชิก";
+  return raw.trim() || "สมาชิก";
+}

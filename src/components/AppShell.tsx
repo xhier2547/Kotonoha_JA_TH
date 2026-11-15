@@ -34,7 +34,7 @@ import {
   SYNC_STATUS_EVENT,
   type SyncStatusState,
 } from "@/lib/cloudSync";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getSupabaseClient, getUserDisplayName } from "@/lib/supabase";
 import {
   applyThemePreference,
   broadcastThemePreference,
@@ -131,15 +131,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       void client.auth.getUser().then(({ data }) => {
         if (!active) return;
         const u = data.user;
-        setAccountLabel(
-          u ? ((u.user_metadata?.display_name as string) || u.email || "สมาชิก") : null
-        );
+        setAccountLabel(u ? getUserDisplayName(u) : null);
       });
       const { data: sub } = client.auth.onAuthStateChange((_ev, session) => {
         const u = session?.user;
-        setAccountLabel(
-          u ? ((u.user_metadata?.display_name as string) || u.email || "สมาชิก") : null
-        );
+        setAccountLabel(u ? getUserDisplayName(u) : null);
       });
       unsubAuth = () => sub.subscription.unsubscribe();
     }
