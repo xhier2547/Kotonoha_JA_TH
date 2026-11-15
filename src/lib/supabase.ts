@@ -15,10 +15,11 @@ export function isSupabaseConfigured(): boolean {
 }
 
 export function getSupabaseClient(): SupabaseClient | null {
-  if (!isSupabaseConfigured()) return null;
+  const validation = validateSupabaseEnv(SUPABASE_URL, SUPABASE_ANON_KEY);
+  if (!validation.valid || !validation.normalizedUrl) return null;
   if (!cachedClient) {
     try {
-      cachedClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cachedClient = createClient(validation.normalizedUrl, SUPABASE_ANON_KEY, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,

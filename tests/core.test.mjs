@@ -335,17 +335,29 @@ test("Stroke order dataset has valid 100x100 paths and Thai tips", () => {
 });
 
 test("Supabase env validation prevents invalid URL crash and blocks sb_secret_ in public key", () => {
-  assert.deepEqual(validateSupabaseEnv("", ""), { valid: false, issue: "missing" });
+  assert.deepEqual(validateSupabaseEnv("", ""), {
+    valid: false,
+    issue: "missing",
+    normalizedUrl: "",
+  });
   assert.deepEqual(
     validateSupabaseEnv("sb_publishable_abc123", "eyJ_anon"),
-    { valid: false, issue: "invalid_url" }
+    { valid: false, issue: "invalid_url", normalizedUrl: "" }
+  );
+  assert.deepEqual(
+    validateSupabaseEnv("https://supabase.com/dashboard/project/abc", "eyJ_anon"),
+    { valid: false, issue: "invalid_url", normalizedUrl: "" }
   );
   assert.deepEqual(
     validateSupabaseEnv("https://example.supabase.co", "sb_secret_123"),
-    { valid: false, issue: "secret_key_used_as_public" }
+    { valid: false, issue: "secret_key_used_as_public", normalizedUrl: "" }
   );
   assert.deepEqual(
-    validateSupabaseEnv("https://example.supabase.co", "sb_publishable_abc123"),
-    { valid: true, issue: "ok" }
+    validateSupabaseEnv("https://example.supabase.co/rest/v1/", "sb_publishable_abc123"),
+    {
+      valid: true,
+      issue: "ok",
+      normalizedUrl: "https://example.supabase.co",
+    }
   );
 });
