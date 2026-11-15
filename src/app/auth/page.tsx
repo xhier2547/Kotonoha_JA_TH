@@ -17,7 +17,11 @@ import {
   UserPlus,
   Wrench,
 } from "lucide-react";
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  getSupabaseClient,
+  getSupabaseConfigIssue,
+  isSupabaseConfigured,
+} from "@/lib/supabase";
 import { pullProgressFromCloud, pushProgressToCloud } from "@/lib/cloudSync";
 import { CrestSealIcon } from "@/components/LuxuryIcons";
 
@@ -26,6 +30,7 @@ type AuthMode = "signin" | "signup";
 export default function AuthPage() {
   const router = useRouter();
   const configured = isSupabaseConfigured();
+  const configIssue = getSupabaseConfigIssue();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(configured);
@@ -172,17 +177,41 @@ export default function AuthPage() {
         <section className="rounded-2xl border border-amber-500/35 bg-amber-500/5 p-5 space-y-3">
           <div className="flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-300">
             <Wrench className="w-4 h-4" />
-            <span>ยังไม่ได้ตั้งค่า Environment Variables ของ Supabase</span>
+            <span>
+              {configIssue === "invalid_url"
+                ? "ค่า NEXT_PUBLIC_SUPABASE_URL ไม่ใช่ URL ที่ถูกต้อง"
+                : configIssue === "secret_key_used_as_public"
+                ? "ตรวจพบ Secret Key (sb_secret_...) ใน NEXT_PUBLIC_SUPABASE_ANON_KEY"
+                : "ยังไม่ได้ตั้งค่า Environment Variables ของ Supabase"}
+            </span>
           </div>
           <p className="text-xs text-foreground/80 leading-relaxed">
-            โค้ดระบบสมาชิกและสคริปต์ SQL พร้อมใช้งานแล้วครับ แต่บนสภาพแวดล้อมนี้ยังไม่มีค่า{" "}
-            <code className="font-mono px-1 py-0.5 rounded bg-surface">NEXT_PUBLIC_SUPABASE_URL</code> และ{" "}
-            <code className="font-mono px-1 py-0.5 rounded bg-surface">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
+            {configIssue === "invalid_url" ? (
+              <>
+                ค่า <code className="font-mono px-1 py-0.5 rounded bg-surface">NEXT_PUBLIC_SUPABASE_URL</code>{" "}
+                ต้องเป็น Project URL เช่น{" "}
+                <code className="font-mono px-1 py-0.5 rounded bg-surface">https://xxxx.supabase.co</code>{" "}
+                ไม่ใช่คีย์ <code className="font-mono px-1 py-0.5 rounded bg-surface">sb_publishable_...</code>
+              </>
+            ) : configIssue === "secret_key_used_as_public" ? (
+              <>
+                ห้ามนำ <code className="font-mono px-1 py-0.5 rounded bg-surface">sb_secret_...</code>{" "}
+                มาใส่ใน <code className="font-mono px-1 py-0.5 rounded bg-surface">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>{" "}
+                กรุณาเปลี่ยนไปใช้คีย์ <code className="font-mono px-1 py-0.5 rounded bg-surface">sb_publishable_...</code>{" "}
+                หรือ Anon Public Key และรีบ Rotate/Revoke คีย์ลับตัวเก่าใน Supabase ทันที
+              </>
+            ) : (
+              <>
+                โค้ดระบบสมาชิกและสคริปต์ SQL พร้อมใช้งานแล้วครับ แต่บนสภาพแวดล้อมนี้ยังไม่มีค่า{" "}
+                <code className="font-mono px-1 py-0.5 rounded bg-surface">NEXT_PUBLIC_SUPABASE_URL</code> และ{" "}
+                <code className="font-mono px-1 py-0.5 rounded bg-surface">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
+              </>
+            )}
           </p>
           <ol className="text-xs text-foreground/75 list-decimal pl-5 space-y-1">
-            <li>สร้างโปรเจกต์ฟรีที่ Supabase แล้วรันสคริปต์ใน <code className="font-mono">supabase/schema.sql</code></li>
-            <li>นำ URL และ Anon Key ใส่ใน <code className="font-mono">.env.local</code> หรือ Vercel Environment Variables</li>
-            <li>ดูขั้นตอนละเอียดเพิ่มเติมได้ในไฟล์ <code className="font-mono">DEPLOY.md</code></li>
+            <li>ดู Project URL ใน Supabase Dashboard -&gt; Project Settings -&gt; Data API</li>
+            <li>นำ Project URL ใส่ใน <code className="font-mono">NEXT_PUBLIC_SUPABASE_URL</code> และ Publishable Key ใส่ใน <code className="font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</code></li>
+            <li>อัปเดตทั้งใน Vercel Environment Variables (แล้ว Redeploy) และใน <code className="font-mono">.env.local</code></li>
           </ol>
           <button
             type="button"

@@ -38,6 +38,7 @@ const {
   analyzeLearnerWeaknesses,
 } = require("../.test-dist/lib/weaknessAnalyzer.js");
 const { STROKE_ORDER_MAP } = require("../.test-dist/data/strokeOrders.js");
+const { validateSupabaseEnv } = require("../.test-dist/lib/supabaseConfig.js");
 
 // Check for Unicode emojis while allowing standard JLPT `★` (U+2605) sentence-ordering marker
 const EMOJI_REGEX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{2604}\u{2606}-\u{27BF}]/u;
@@ -331,4 +332,20 @@ test("Stroke order dataset has valid 100x100 paths and Thai tips", () => {
     }
     assert.equal(EMOJI_REGEX.test(JSON.stringify(entry)), false);
   }
+});
+
+test("Supabase env validation prevents invalid URL crash and blocks sb_secret_ in public key", () => {
+  assert.deepEqual(validateSupabaseEnv("", ""), { valid: false, issue: "missing" });
+  assert.deepEqual(
+    validateSupabaseEnv("sb_publishable_abc123", "eyJ_anon"),
+    { valid: false, issue: "invalid_url" }
+  );
+  assert.deepEqual(
+    validateSupabaseEnv("https://example.supabase.co", "sb_secret_123"),
+    { valid: false, issue: "secret_key_used_as_public" }
+  );
+  assert.deepEqual(
+    validateSupabaseEnv("https://example.supabase.co", "sb_publishable_abc123"),
+    { valid: true, issue: "ok" }
+  );
 });

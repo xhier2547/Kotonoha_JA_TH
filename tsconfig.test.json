@@ -18,6 +18,7 @@
     "src/lib/subtitleParser.ts",
     "src/lib/weaknessAnalyzer.ts",
     "src/lib/vocabLookup.ts",
+    "src/lib/supabaseConfig.ts",
     "src/data/coreCurriculum.ts",
     "src/data/strokeOrders.ts",
     "src/data/minnaNoNihongo.ts",

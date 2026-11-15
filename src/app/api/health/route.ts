@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
+import { validateSupabaseEnv } from "@/lib/supabaseConfig";
 
 export async function GET() {
-  const hasUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim());
-  const hasAnonKey = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
+  const validation = validateSupabaseEnv(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
 
   return NextResponse.json({
     ok: true,
     service: "Kotonoha Studio",
-    supabaseConfigured: hasUrl && hasAnonKey,
+    supabaseConfigured: validation.valid,
+    supabaseIssue: validation.issue,
     nodeVersion: process.version,
     timestamp: new Date().toISOString(),
   });
