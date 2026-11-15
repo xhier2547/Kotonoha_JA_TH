@@ -1,0 +1,28 @@
+{
+  "name": "言の葉スタジオ | Kotonoha Studio",
+  "short_name": "Kotonoha",
+  "description": "เว็บแอพเรียนภาษาญี่ปุ่นครบวงจร: Minna no Nihongo 50 บท, ข้อสอบ JLPT N5–N1, Flashcard FSRS-7, Pitch Accent & AI Kaiwa",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#4338ca",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "outDir": ".test-dist",
+    "rootDir": "src",
+    "jsx": "react-jsx",
+    "isolatedModules": false
+  },
+  "include": [
+    "src/types/learning.ts",
+    "src/lib/fsrs.ts",
+    "src/lib/conjugation.ts",
+    "src/lib/dialogueParser.ts",
+    "src/lib/deckPortability.ts",
+    "src/lib/subtitleParser.ts",
+    "src/lib/weaknessAnalyzer.ts",
+    "src/lib/vocabLookup.ts",
+    "src/data/coreCurriculum.ts",
+    "src/data/strokeOrders.ts",
+    "src/data/minnaNoNihongo.ts",
+    "src/data/minnaNoNihongoPart1.ts",
+    "src/data/minnaNoNihongoPart2.ts",
+    "src/data/minnaNoNihongoPart3.ts",
+    "src/data/jlptTypes.ts",
+    "src/data/jlptN5N4.ts",
+    "src/data/jlptN3N2N1.ts",
+    "src/data/jlptFullN5.ts",
+    "src/data/jlptFullN4.ts",
+    "src/data/jlptFullN3.ts",
+    "src/data/jlptFullN2.ts",
+    "src/data/jlptFullN1.ts",
+    "src/data/jlptExams.ts"
+  ]
+}
