@@ -575,9 +575,13 @@ export default function AuthPage() {
       )}
 
       <div className="text-center text-xs text-foreground/60">
-        การเข้าสู่ระบบหรือใช้งาน Cloud Sync ถือว่าคุณรับทราบ{" "}
+        การเข้าสู่ระบบหรือใช้งาน Cloud Sync ถือว่าคุณยอมรับ{" "}
+        <Link href="/terms" className="text-primary underline underline-offset-2 hover:text-primary/80">
+          ข้อกำหนดการใช้งาน (Terms)
+        </Link>{" "}
+        และ{" "}
         <Link href="/privacy" className="text-primary underline underline-offset-2 hover:text-primary/80">
-          นโยบายความเป็นส่วนตัว (Privacy Policy)
+          นโยบายความเป็นส่วนตัว (Privacy)
         </Link>
       </div>
     </div>

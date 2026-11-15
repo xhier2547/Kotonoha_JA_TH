@@ -111,6 +111,12 @@ export default function PrivacyPolicyPage() {
             </a>
             {" "}หรือแจ้งขอลบบัญชีและข้อมูลทั้งหมดได้ผ่าน GitHub Repository ของโปรเจกต์
           </p>
+          <p className="text-xs text-foreground/70 pt-2">
+            ดูเพิ่มเติม:{" "}
+            <Link href="/terms" className="text-primary underline underline-offset-2">
+              ข้อกำหนดการใช้งาน (Terms of Service)
+            </Link>
+          </p>
         </section>
       </article>
     </div>
