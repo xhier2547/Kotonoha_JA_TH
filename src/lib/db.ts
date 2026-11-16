@@ -3,6 +3,7 @@ import type {
   AppSettings,
   CustomScenarioRecord,
   JlptAttemptRecord,
+  JlptLevel,
   KaiwaHistoryRecord,
   KanaMasteryRecord,
   MinnaProgressRecord,
@@ -664,6 +665,38 @@ export async function bulkMineMinnaVocab(
     if (res.created) added += 1;
   }
   return { added, total: items.length };
+}
+
+/** Adds Minna lesson grammar patterns as `cardType: "grammar"` cards in FSRS. */
+export async function bulkMineMinnaGrammar(
+  lesson: number,
+  jlpt: JlptLevel,
+  grammarPoints: {
+    pattern: string;
+    structure: string;
+    explanationTh: string;
+    tipForThaiTh: string;
+    examples: { jp: string; reading: string; th: string }[];
+  }[]
+): Promise<{ added: number; total: number }> {
+  await ensureSeeded();
+  let added = 0;
+  for (const gp of grammarPoints) {
+    const firstEx = gp.examples[0];
+    const res = await mineCardToSrs({
+      front: gp.pattern,
+      reading: gp.structure,
+      meaningTh: gp.explanationTh,
+      mnemonic: gp.tipForThaiTh,
+      exampleSentence: firstEx?.jp,
+      exampleReading: firstEx?.reading,
+      exampleMeaningTh: firstEx?.th,
+      cardType: "grammar",
+      tags: ["Minna", `บทที่ ${lesson}`, "Grammar", jlpt],
+    });
+    if (res.created) added += 1;
+  }
+  return { added, total: grammarPoints.length };
 }
 
 export async function getJlptAttempts(): Promise<JlptAttemptRecord[]> {

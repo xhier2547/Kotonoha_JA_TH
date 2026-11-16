@@ -12,11 +12,14 @@ import {
 import { saveAppSettings } from "@/lib/db";
 import {
   DAILY_TIME_OPTIONS,
+  PLACEMENT_QUIZ_QUESTIONS,
   PROFICIENCY_OPTIONS,
   STUDY_FOCUS_OPTIONS,
   buildSettingsFromOnboarding,
   computeDailyStudyPlan,
+  evaluatePlacementQuiz,
   inferProficiencyTrack,
+  type PlacementEvaluation,
   type ProficiencyTrack,
 } from "@/lib/studyPlan";
 import type { AppSettings, StudyGoalFocus } from "@/types/learning";
@@ -45,6 +48,9 @@ export function OnboardingModal({
   const [studyGoalFocus, setStudyGoalFocus] = useState<StudyGoalFocus>(
     initialSettings.studyGoalFocus ?? "balanced"
   );
+  const [showPlacementQuiz, setShowPlacementQuiz] = useState(false);
+  const [placementAnswers, setPlacementAnswers] = useState<Record<string, number>>({});
+  const [placementResult, setPlacementResult] = useState<PlacementEvaluation | null>(null);
   const [saving, setSaving] = useState(false);
 
   const previewSettings = useMemo(
@@ -140,10 +146,97 @@ export function OnboardingModal({
         <div className="p-5 sm:p-6 space-y-6 max-h-[75vh] overflow-y-auto">
           {/* Question 1: Proficiency */}
           <section className="space-y-2.5">
-            <div className="flex items-center gap-2 text-sm font-bold">
-              <GraduationCap className="w-4 h-4 text-primary" />
-              <span>1. ตอนนี้พื้นฐานภาษาญี่ปุ่นของคุณอยู่ระดับไหนครับ?</span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm font-bold">
+                <GraduationCap className="w-4 h-4 text-primary" />
+                <span>1. ตอนนี้พื้นฐานภาษาญี่ปุ่นของคุณอยู่ระดับไหนครับ?</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPlacementQuiz((v) => !v)}
+                className="text-xs font-medium text-primary hover:underline underline-offset-2 cursor-pointer"
+              >
+                {showPlacementQuiz
+                  ? "ปิดแบบทดสอบวัดระดับ"
+                  : "ไม่แน่ใจระดับ? ลองวัดระดับด่วน (6 ข้อ)"}
+              </button>
             </div>
+
+            {showPlacementQuiz && (
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs font-bold text-primary">
+                    แบบทดสอบวัดระดับด่วน (Kana -&gt; N2)
+                  </div>
+                  {placementResult && (
+                    <span className="text-xs font-semibold text-matcha">
+                      {placementResult.summaryTh}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                  {PLACEMENT_QUIZ_QUESTIONS.map((q, idx) => (
+                    <div
+                      key={q.id}
+                      className="rounded-xl border border-border bg-surface p-3 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="font-semibold">
+                          ข้อ {idx + 1}. {q.promptTh}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-surface-muted text-[10px] font-mono">
+                          {q.levelTag}
+                        </span>
+                      </div>
+                      <div className="font-jp text-sm font-bold">{q.promptJp}</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {q.choices.map((ch, cIdx) => {
+                          const picked = placementAnswers[q.id] === cIdx;
+                          return (
+                            <button
+                              key={cIdx}
+                              type="button"
+                              onClick={() =>
+                                setPlacementAnswers((prev) => ({
+                                  ...prev,
+                                  [q.id]: cIdx,
+                                }))
+                              }
+                              className={`text-left px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${
+                                picked
+                                  ? "border-primary bg-primary text-primary-foreground font-medium"
+                                  : "border-border bg-background hover:bg-surface-muted"
+                              }`}
+                            >
+                              {ch}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <span className="text-[11px] text-foreground/65">
+                    ตอบแล้ว {Object.keys(placementAnswers).length} /{" "}
+                    {PLACEMENT_QUIZ_QUESTIONS.length} ข้อ
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const evaluated = evaluatePlacementQuiz(placementAnswers);
+                      setPlacementResult(evaluated);
+                      setProficiency(evaluated.recommendedTrack);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold cursor-pointer"
+                  >
+                    คำนวณระดับ &amp; เลือกให้อัตโนมัติ
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {PROFICIENCY_OPTIONS.map((opt) => {
                 const active = proficiency === opt.id;

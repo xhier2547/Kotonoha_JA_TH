@@ -44,7 +44,14 @@ import { translateJaToTh } from "@/lib/localTranslate";
 import { InteractiveJapaneseText } from "@/components/InteractiveJapaneseText";
 import { SpeakButton } from "@/components/SpeakButton";
 import { CrestSealIcon, FlashcardDeckIcon } from "@/components/LuxuryIcons";
-import { speakJapanese, speakJapaneseDialogue, stopSpeaking } from "@/lib/speech";
+import {
+  getJapaneseSpeechCapabilities,
+  speakJapanese,
+  speakJapaneseDialogue,
+  stopSpeaking,
+  waitForJapaneseVoices,
+  type JapaneseSpeechCapabilities,
+} from "@/lib/speech";
 import type { JlptAttemptRecord, JlptLevel, TokenizedWord } from "@/types/learning";
 
 const LEVELS: JlptLevel[] = ["N5", "N4", "N3", "N2", "N1"];
@@ -134,6 +141,10 @@ export default function JlptPage() {
   // Submission & History & Saved Drafts
   const [submittedReport, setSubmittedReport] = useState<JlptScoreReport | null>(null);
   const [playingQuestionId, setPlayingQuestionId] = useState<string | null>(null);
+  const [audioRate, setAudioRate] = useState<number>(0.95);
+  const [speechCaps, setSpeechCaps] = useState<JapaneseSpeechCapabilities | null>(null);
+  const [bulkSavingWrong, setBulkSavingWrong] = useState(false);
+  const [wrongSavedMsg, setWrongSavedMsg] = useState<string | null>(null);
   const [attempts, setAttempts] = useState<JlptAttemptRecord[]>([]);
   const [knownFronts, setKnownFronts] = useState<Set<string>>(new Set());
   const [drafts, setDrafts] = useState<Record<string, JlptExamDraft>>({});
@@ -165,6 +176,11 @@ export default function JlptPage() {
         setSelectedLevel(settings.learnerLevel);
       }
       setShowFurigana(settings.furiganaMode === "all");
+
+      void waitForJapaneseVoices(600).then(() => {
+        if (!active) return;
+        setSpeechCaps(getJapaneseSpeechCapabilities());
+      });
     })();
     return () => {
       active = false;
@@ -285,6 +301,7 @@ export default function JlptPage() {
     setRevealedScripts(new Set());
     setCheckedPracticeIds(new Set());
     setSubmittedReport(null);
+    setWrongSavedMsg(null);
     setPickedToken(null);
     setSaveNotice(null);
     setExamMinedWords([]);
@@ -308,6 +325,7 @@ export default function JlptPage() {
     setRevealedScripts(new Set());
     setCheckedPracticeIds(new Set());
     setSubmittedReport(null);
+    setWrongSavedMsg(null);
     setPickedToken(null);
     setSaveNotice(null);
     setExamMinedWords([]);
@@ -554,6 +572,74 @@ export default function JlptPage() {
     if (!pickedToken) return [];
     return findKanjiMatches(pickedToken.surface);
   }, [pickedToken]);
+
+  const buildQuestionSrsPayload = (
+    q: JlptExamPaper["mondaiGroups"][number]["questions"][number],
+    section: "vocab" | "grammar_reading" | "listening",
+    level: JlptLevel
+  ) => {
+    const answerText = q.choices[q.correctIndex] ?? "";
+    const focusMatch = q.promptJp.match(/【([^】]+)】/);
+    const frontText = focusMatch
+      ? focusMatch[1]
+      : `${answerText} (${q.promptJp.slice(0, 24)})`;
+    const isGrammar = section === "grammar_reading";
+    return {
+      front: frontText,
+      reading: answerText,
+      meaningTh: q.explanationTh,
+      exampleSentence: q.promptJp,
+      cardType: (isGrammar ? "grammar" : "vocab") as "grammar" | "vocab",
+      tags: [
+        "JLPT",
+        level,
+        isGrammar ? "Grammar" : section === "listening" ? "Listening" : "Vocab",
+      ],
+    };
+  };
+
+  const handleMineQuestionItem = async (
+    q: JlptExamPaper["mondaiGroups"][number]["questions"][number],
+    section: "vocab" | "grammar_reading" | "listening"
+  ) => {
+    if (!activeExam) return;
+    const payload = buildQuestionSrsPayload(q, section, activeExam.level);
+    await mineCardToSrs(payload);
+    const summary = await getLearningSummary();
+    setKnownFronts(summary.knownFronts);
+    setSaveNotice(`เก็บ "${payload.front}" ลงคลัง FSRS แล้ว!`);
+  };
+
+  const handleMineAllWrongQuestions = async () => {
+    if (!activeExam || !submittedReport) return;
+    setBulkSavingWrong(true);
+    setWrongSavedMsg(null);
+    try {
+      let added = 0;
+      let totalWrong = 0;
+      for (const group of activeExam.mondaiGroups) {
+        for (const q of group.questions) {
+          if (answers[q.id] === q.correctIndex) continue;
+          totalWrong += 1;
+          const res = await mineCardToSrs(
+            buildQuestionSrsPayload(q, group.section, activeExam.level)
+          );
+          if (res.created) added += 1;
+        }
+      }
+      const summary = await getLearningSummary();
+      setKnownFronts(summary.knownFronts);
+      setWrongSavedMsg(
+        totalWrong === 0
+          ? "คุณตอบถูกทุกข้อ ไม่มีข้อผิดให้เก็บเพิ่มเติมครับ!"
+          : added > 0
+            ? `เพิ่มข้อที่ตอบผิดเข้า FSRS ${added} รายการใหม่แล้ว (จากทั้งหมด ${totalWrong} ข้อผิด)`
+            : `ทั้ง ${totalWrong} ข้อที่ตอบผิดมีอยู่ในคลัง FSRS แล้ว`
+      );
+    } finally {
+      setBulkSavingWrong(false);
+    }
+  };
 
   // ============================================================
   // VIEW 1: EXAM LOBBY (Select Level N5-N1 & Multi-Year Sets)
@@ -1041,6 +1127,26 @@ export default function JlptPage() {
                   ตอบถูกทั้งหมด {submittedReport.correctCount} / {submittedReport.totalQuestions} ข้อ
                   (เกณฑ์ผ่านรวม {JLPT_LEVEL_RULES[activeExam.level].totalPass}/180 และต้องถึงขั้นต่ำทุกพาร์ต)
                 </p>
+                {submittedReport.correctCount < submittedReport.totalQuestions && (
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={bulkSavingWrong}
+                      onClick={() => void handleMineAllWrongQuestions()}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium hover:opacity-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>
+                        {bulkSavingWrong
+                          ? "กำลังเก็บ..."
+                          : `เก็บข้อที่ตอบผิดลง FSRS (${submittedReport.totalQuestions - submittedReport.correctCount} ข้อ)`}
+                      </span>
+                    </button>
+                    {wrongSavedMsg && (
+                      <span className="text-xs text-matcha font-medium">{wrongSavedMsg}</span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1199,7 +1305,7 @@ export default function JlptPage() {
                       {q.listeningScriptJp && (
                         <div className="rounded-xl border border-primary/25 bg-primary/5 p-3.5 space-y-2.5">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1209,6 +1315,7 @@ export default function JlptPage() {
                                   } else {
                                     setPlayingQuestionId(q.id);
                                     void speakJapaneseDialogue(q.listeningScriptJp!, {
+                                      rate: audioRate,
                                       onDone: () =>
                                         setPlayingQuestionId((curr) =>
                                           curr === q.id ? null : curr
@@ -1234,6 +1341,27 @@ export default function JlptPage() {
                                   </>
                                 )}
                               </button>
+
+                              <div className="inline-flex rounded-lg border border-border bg-surface p-0.5 text-[11px]">
+                                {[
+                                  { rate: 0.8, label: "0.8x" },
+                                  { rate: 0.95, label: "ปกติ" },
+                                  { rate: 1.15, label: "1.15x" },
+                                ].map((spd) => (
+                                  <button
+                                    key={spd.rate}
+                                    type="button"
+                                    onClick={() => setAudioRate(spd.rate)}
+                                    className={`px-2 py-1 rounded-md cursor-pointer transition-colors ${
+                                      audioRate === spd.rate
+                                        ? "bg-primary text-primary-foreground font-semibold"
+                                        : "text-foreground/70 hover:text-foreground"
+                                    }`}
+                                  >
+                                    {spd.label}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
 
                             <button
@@ -1245,6 +1373,23 @@ export default function JlptPage() {
                               <span>{scriptOpen ? "ซ่อนบทสนทนา" : "ดูสคริปต์ (Script)"}</span>
                             </button>
                           </div>
+
+                          {speechCaps && (!speechCaps.supported || speechCaps.voiceCount === 0) && (
+                            <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-foreground/85 flex flex-wrap items-center justify-between gap-2">
+                              <span>
+                                เบราว์เซอร์/อุปกรณ์นี้ยังไม่มีเสียงอ่านภาษาญี่ปุ่น (ja-JP) ในเครื่อง — สามารถกดดูบทสนทนาอ่านแทนได้ทันที หรือเปิดเสียงญี่ปุ่นในระบบ/Edge
+                              </span>
+                              {!scriptOpen && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleScript(q.id)}
+                                  className="font-semibold text-primary underline underline-offset-2 cursor-pointer shrink-0"
+                                >
+                                  เปิดสคริปต์ช่วยอ่าน
+                                </button>
+                              )}
+                            </div>
+                          )}
 
                           {scriptOpen && (
                             <div className="rounded-lg bg-surface p-3 border border-border text-sm whitespace-pre-line">
@@ -1349,11 +1494,25 @@ export default function JlptPage() {
                           ) : (
                             <XCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                           )}
-                          <div>
-                            <div className="font-bold mb-0.5">
-                              {isCorrect
-                                ? "ถูกต้อง"
-                                : `เฉลย: ข้อ ${q.correctIndex + 1} (${q.choices[q.correctIndex]})`}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-0.5">
+                              <div className="font-bold">
+                                {isCorrect
+                                  ? "ถูกต้อง"
+                                  : `เฉลย: ข้อ ${q.correctIndex + 1} (${q.choices[q.correctIndex]})`}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => void handleMineQuestionItem(q, group.section)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-surface hover:bg-surface-muted text-[11px] font-medium cursor-pointer shrink-0"
+                              >
+                                <PlusCircle className="w-3 h-3 text-primary" />
+                                <span>
+                                  {group.section === "grammar_reading"
+                                    ? "เก็บไวยากรณ์เข้า FSRS"
+                                    : "เก็บคำนี้เข้า FSRS"}
+                                </span>
+                              </button>
                             </div>
                             <p className="text-foreground/80">{q.explanationTh}</p>
                           </div>

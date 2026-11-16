@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { MINNA_LESSONS, type MinnaLesson } from "@/data/minnaNoNihongo";
 import {
+  bulkMineMinnaGrammar,
   bulkMineMinnaVocab,
   db,
   enqueueShadowing,
@@ -185,6 +186,49 @@ export default function MinnaPage() {
     } finally {
       setBulkLoading(false);
     }
+  };
+
+  const handleBulkMineGrammarLesson = async () => {
+    setBulkLoading(true);
+    setBulkStatus(null);
+    try {
+      const res = await bulkMineMinnaGrammar(
+        activeLessonNum,
+        activeLesson.jlpt,
+        activeLesson.grammarPoints
+      );
+      await loadMinnaData(activeLessonNum);
+      setBulkStatus(
+        res.added > 0
+          ? `เพิ่มไวยากรณ์ใหม่ ${res.added} รูปแบบจากบทที่ ${activeLessonNum} ลงคลัง FSRS แล้ว!`
+          : `ไวยากรณ์ทั้ง ${res.total} รูปแบบของบทที่ ${activeLessonNum} อยู่ในคลัง FSRS แล้ว`
+      );
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleMineSingleGrammar = async (
+    gp: MinnaLesson["grammarPoints"][number]
+  ) => {
+    const firstEx = gp.examples[0];
+    const res = await mineCardToSrs({
+      front: gp.pattern,
+      reading: gp.structure,
+      meaningTh: gp.explanationTh,
+      mnemonic: gp.tipForThaiTh,
+      exampleSentence: firstEx?.jp,
+      exampleReading: firstEx?.reading,
+      exampleMeaningTh: firstEx?.th,
+      cardType: "grammar",
+      tags: ["Minna", `บทที่ ${activeLessonNum}`, "Grammar", activeLesson.jlpt],
+    });
+    await loadMinnaData(activeLessonNum);
+    setBulkStatus(
+      res.created
+        ? `เพิ่มไวยากรณ์ "${gp.pattern}" ลงคลัง FSRS แล้ว!`
+        : `ไวยากรณ์ "${gp.pattern}" อยู่ในคลัง FSRS แล้ว`
+    );
   };
 
   const handleMineSingleWord = async (v: MinnaLesson["vocab"][number]) => {
@@ -420,6 +464,15 @@ export default function MinnaPage() {
                     {bulkLoading ? "กำลังเก็บ..." : "เก็บศัพท์ทั้งบทเข้า FSRS"}
                   </span>
                 </button>
+                <button
+                  type="button"
+                  disabled={bulkLoading}
+                  onClick={() => void handleBulkMineGrammarLesson()}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-background hover:bg-surface-muted text-xs font-medium cursor-pointer disabled:opacity-50"
+                >
+                  <PlusCircle className="w-3.5 h-3.5 text-matcha" />
+                  <span>เก็บไวยากรณ์ทั้งบทเข้า FSRS</span>
+                </button>
               </div>
             </div>
 
@@ -465,14 +518,35 @@ export default function MinnaPage() {
           {/* SUBTAB 1: GRAMMAR GUIDE */}
           {subTab === "grammar" && (
             <div className="space-y-4">
-              {activeLesson.grammarPoints.map((gp, idx) => (
+              {activeLesson.grammarPoints.map((gp, idx) => {
+                const grammarInSrs = knownFronts.has(gp.pattern);
+                return (
                 <div
                   key={idx}
                   className="rounded-2xl border border-border bg-surface p-5 space-y-4"
                 >
                   <div>
-                    <div className="text-[11px] font-semibold text-primary uppercase tracking-wider">
-                      หัวข้อไวยากรณ์ {idx + 1}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[11px] font-semibold text-primary uppercase tracking-wider">
+                        หัวข้อไวยากรณ์ {idx + 1}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleMineSingleGrammar(gp)}
+                        className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg border border-border bg-background hover:bg-surface-muted cursor-pointer"
+                      >
+                        {grammarInSrs ? (
+                          <>
+                            <Check className="w-3 h-3 text-matcha" />
+                            <span className="text-matcha font-medium">เก็บไวยากรณ์แล้ว (FSRS)</span>
+                          </>
+                        ) : (
+                          <>
+                            <PlusCircle className="w-3 h-3 text-primary" />
+                            <span>เก็บไวยากรณ์เข้า FSRS</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                     <h3 className="font-jp text-lg font-bold mt-0.5">{gp.pattern}</h3>
                     <div className="mt-2 rounded-xl bg-surface-muted px-3.5 py-2 font-jp text-xs text-foreground/85 border border-border">
@@ -555,7 +629,8 @@ export default function MinnaPage() {
                     })}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

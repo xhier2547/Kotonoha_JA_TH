@@ -40,8 +40,10 @@ const {
 const { STROKE_ORDER_MAP } = require("../.test-dist/data/strokeOrders.js");
 const { validateSupabaseEnv } = require("../.test-dist/lib/supabaseConfig.js");
 const {
+  PLACEMENT_QUIZ_QUESTIONS,
   buildSettingsFromOnboarding,
   computeDailyStudyPlan,
+  evaluatePlacementQuiz,
   sortFreshCardsByLevel,
 } = require("../.test-dist/lib/studyPlan.js");
 const { resolveAccountSyncStrategy } = require("../.test-dist/lib/accountIsolation.js");
@@ -459,4 +461,26 @@ test("Account switch sync strategy isolates shared browsers while preserving gue
   // Different user signing into shared browser never leaks previous owner's local data
   assert.equal(resolveAccountSyncStrategy("user-a", "user-b", true), "replace_with_cloud");
   assert.equal(resolveAccountSyncStrategy("user-a", "user-b", false), "reset_and_push_fresh");
+});
+
+test("Placement mini-quiz maps scores cleanly without emojis", () => {
+  assert.equal(PLACEMENT_QUIZ_QUESTIONS.length, 6);
+  for (const q of PLACEMENT_QUIZ_QUESTIONS) {
+    assert.equal(EMOJI_REGEX.test(JSON.stringify(q)), false);
+  }
+
+  assert.equal(evaluatePlacementQuiz({}).recommendedTrack, "beginner_zero");
+
+  const n4Answers = {
+    "pl-kana-1": 0,
+    "pl-kana-2": 1,
+    "pl-n5-1": 2,
+    "pl-n4-1": 0,
+  };
+  assert.equal(evaluatePlacementQuiz(n4Answers).recommendedTrack, "n4");
+
+  const perfectAnswers = Object.fromEntries(
+    PLACEMENT_QUIZ_QUESTIONS.map((q) => [q.id, q.correctIndex])
+  );
+  assert.equal(evaluatePlacementQuiz(perfectAnswers).recommendedTrack, "n2");
 });

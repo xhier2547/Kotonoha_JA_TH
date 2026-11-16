@@ -390,3 +390,119 @@ export function sortFreshCardsByLevel(
     (a, b) => getCardJlptDistance(a, targetLevel) - getCardJlptDistance(b, targetLevel)
   );
 }
+
+export interface PlacementQuestion {
+  id: string;
+  levelTag: "Kana" | "N5" | "N4" | "N3" | "N2";
+  promptTh: string;
+  promptJp: string;
+  choices: string[];
+  correctIndex: number;
+}
+
+export const PLACEMENT_QUIZ_QUESTIONS: PlacementQuestion[] = [
+  {
+    id: "pl-kana-1",
+    levelTag: "Kana",
+    promptTh: "คำฮิรางานะนี้อ่านว่าอย่างไร?",
+    promptJp: "あした",
+    choices: ["ashita (พรุ่งนี้)", "kinou (เมื่อวาน)", "asatte (มะรืน)", "ima (ตอนนี้)"],
+    correctIndex: 0,
+  },
+  {
+    id: "pl-kana-2",
+    levelTag: "Kana",
+    promptTh: "คำคาตาคานะนี้หมายถึงอะไร?",
+    promptJp: "レストラン",
+    choices: ["โรงพยาบาล", "ร้านอาหาร", "สถานีรถไฟ", "ซูเปอร์มาร์เก็ต"],
+    correctIndex: 1,
+  },
+  {
+    id: "pl-n5-1",
+    levelTag: "N5",
+    promptTh: "เลือกคำช่วยที่ถูกต้องในประโยคนี้",
+    promptJp: "毎日 電車（　） 会社へ 行きます。",
+    choices: ["を", "が", "で", "に"],
+    correctIndex: 2,
+  },
+  {
+    id: "pl-n4-1",
+    levelTag: "N4",
+    promptTh: "เลือกสำนวนที่เชื่อมเหตุผลได้เหมาะสม",
+    promptJp: "雨が 降って いる（　）、出かけませんでした。",
+    choices: ["ので", "のに", "ながら", "ばかり"],
+    correctIndex: 0,
+  },
+  {
+    id: "pl-n3-1",
+    levelTag: "N3",
+    promptTh: "คำคันจินี้อ่านว่าอย่างไร และหมายความว่าอะไร?",
+    promptJp: "日本での 生活の 経験が あります。",
+    choices: [
+      "けいけん (ประสบการณ์)",
+      "けいかく (แผนการ)",
+      "けんきゅう (งานวิจัย)",
+      "きょうみ (ความสนใจ)",
+    ],
+    correctIndex: 0,
+  },
+  {
+    id: "pl-n2-1",
+    levelTag: "N2",
+    promptTh: "เลือกไวยากรณ์ระดับกลาง-สูงที่ถูกต้อง",
+    promptJp: "忙しい（　）、彼は いつも 手伝って くれる。",
+    choices: [
+      "にあたって",
+      "にもかかわらず",
+      "にほかならない",
+      "をきっかけに",
+    ],
+    correctIndex: 1,
+  },
+];
+
+export interface PlacementEvaluation {
+  score: number;
+  total: number;
+  recommendedTrack: ProficiencyTrack;
+  summaryTh: string;
+}
+
+/** Evaluates the 6-item onboarding mini placement test into a concrete track. */
+export function evaluatePlacementQuiz(
+  answers: Record<string, number>
+): PlacementEvaluation {
+  const total = PLACEMENT_QUIZ_QUESTIONS.length;
+  let score = 0;
+  let kanaCorrect = 0;
+
+  for (const q of PLACEMENT_QUIZ_QUESTIONS) {
+    if (answers[q.id] === q.correctIndex) {
+      score += 1;
+      if (q.levelTag === "Kana") kanaCorrect += 1;
+    }
+  }
+
+  let recommendedTrack: ProficiencyTrack = "beginner_zero";
+  if (score <= 1 || kanaCorrect === 0) {
+    recommendedTrack = "beginner_zero";
+  } else if (score <= 3) {
+    recommendedTrack = "n5";
+  } else if (score === 4) {
+    recommendedTrack = "n4";
+  } else if (score === 5) {
+    recommendedTrack = "n3";
+  } else {
+    recommendedTrack = "n2";
+  }
+
+  const label =
+    PROFICIENCY_OPTIONS.find((o) => o.id === recommendedTrack)?.label ?? "N5";
+
+  return {
+    score,
+    total,
+    recommendedTrack,
+    summaryTh: `ได้ ${score}/${total} ข้อ — แนะนำเริ่มต้นที่ "${label}"`,
+  };
+}

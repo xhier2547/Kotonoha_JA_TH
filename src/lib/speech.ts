@@ -6,11 +6,62 @@ import {
 
 let activeDialogueSessionId = 0;
 
+export interface JapaneseSpeechCapabilities {
+  supported: boolean;
+  voiceCount: number;
+  hasMultipleVoices: boolean;
+  voiceNames: string[];
+}
+
 export function getJapaneseVoices(): SpeechSynthesisVoice[] {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return [];
   return window.speechSynthesis
     .getVoices()
     .filter((v) => v.lang.toLowerCase().startsWith("ja"));
+}
+
+export function getJapaneseSpeechCapabilities(): JapaneseSpeechCapabilities {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    return {
+      supported: false,
+      voiceCount: 0,
+      hasMultipleVoices: false,
+      voiceNames: [],
+    };
+  }
+  const voices = getJapaneseVoices();
+  return {
+    supported: true,
+    voiceCount: voices.length,
+    hasMultipleVoices: voices.length >= 2,
+    voiceNames: voices.map((v) => v.name),
+  };
+}
+
+/** Waits briefly for async browser speechSynthesis voices when initially empty. */
+export function waitForJapaneseVoices(timeoutMs = 700): Promise<SpeechSynthesisVoice[]> {
+  const immediate = getJapaneseVoices();
+  if (
+    immediate.length > 0 ||
+    typeof window === "undefined" ||
+    !("speechSynthesis" in window)
+  ) {
+    return Promise.resolve(immediate);
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const synth = window.speechSynthesis;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      synth.removeEventListener?.("voiceschanged", onVoices);
+      resolve(getJapaneseVoices());
+    };
+    const onVoices = () => finish();
+    synth.addEventListener?.("voiceschanged", onVoices);
+    setTimeout(finish, timeoutMs);
+  });
 }
 
 export function stopSpeaking(): void {
@@ -83,15 +134,15 @@ function speakSingleUtterance(
   });
 }
 
-export function speakJapanese(
+export async function speakJapanese(
   text: string,
   options?: { rate?: number; voiceName?: string; pitch?: number }
 ): Promise<void> {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-    return Promise.resolve();
+    return;
   }
   stopSpeaking();
-  const voices = getJapaneseVoices();
+  const voices = await waitForJapaneseVoices();
   const voice =
     (options?.voiceName ? voices.find((v) => v.name === options.voiceName) : undefined) ||
     voices.find((v) => /nanami|keita|google|kyoko|otoya|haruka/i.test(v.name)) ||
@@ -125,7 +176,7 @@ export async function speakJapaneseDialogue(
   const mySessionId = activeDialogueSessionId;
   const turns =
     typeof scriptOrTurns === "string" ? parseDialogueTurns(scriptOrTurns) : scriptOrTurns;
-  const voices = getJapaneseVoices();
+  const voices = await waitForJapaneseVoices();
 
   for (let i = 0; i < turns.length; i++) {
     if (activeDialogueSessionId !== mySessionId) return;
