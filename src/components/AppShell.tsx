@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Award,
   BookMarked,
@@ -27,8 +27,17 @@ import {
 import {
   DB_MUTATED_EVENT,
   getAppSettings,
+  getLearningSummary,
+  getLocalDayKey,
   saveAppSettings,
 } from "@/lib/db";
+import {
+  readLastRemindedDayKey,
+  shouldTriggerReminderToday,
+  showBrowserStudyNotification,
+  updatePwaAppBadge,
+  writeLastRemindedDayKey,
+} from "@/lib/studyReminder";
 import {
   scheduleBackgroundCloudSync,
   SYNC_STATUS_EVENT,
@@ -88,8 +97,10 @@ function ThemeModeIcon({ theme }: { theme: ThemePreference }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [theme, setTheme] = useState<ThemePreference>("system");
   const [accountLabel, setAccountLabel] = useState<string | null>(null);
+  const [dueCount, setDueCount] = useState<number>(0);
   const [syncState, setSyncState] = useState<SyncStatusState>({
     syncing: false,
     lastSyncedAt: null,
@@ -98,12 +109,49 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    getAppSettings().then((s) => {
-      if (!active) return;
-      const pref = s.theme ?? "system";
-      setTheme(pref);
-      applyThemePreference(pref);
-    });
+
+    const refreshMetricsAndReminder = async () => {
+      try {
+        const [s, summary] = await Promise.all([
+          getAppSettings(),
+          getLearningSummary(),
+        ]);
+        if (!active) return;
+        const pref = s.theme ?? "system";
+        setTheme(pref);
+        applyThemePreference(pref);
+        setDueCount(summary.dueCount);
+        updatePwaAppBadge(summary.dueCount);
+
+        const todayKey = getLocalDayKey();
+        if (
+          shouldTriggerReminderToday({
+            enabled: s.reminderEnabled,
+            reminderTime: s.reminderTime,
+            dueCount: summary.dueCount,
+            lastRemindedDayKey: readLastRemindedDayKey(),
+            todayKey,
+          })
+        ) {
+          const sent = showBrowserStudyNotification({
+            dueCount: summary.dueCount,
+            dailyMinutes: s.dailyMinutes,
+            learnerLevel: s.learnerLevel,
+            onClick: () => router.push("/srs"),
+          });
+          if (sent) {
+            writeLastRemindedDayKey(todayKey);
+          }
+        }
+      } catch {
+        // Ignore transient IndexedDB read errors during reset/init
+      }
+    };
+
+    void refreshMetricsAndReminder();
+    const reminderInterval = window.setInterval(() => {
+      void refreshMetricsAndReminder();
+    }, 60_000);
 
     const handleThemeEvent = (event: Event) => {
       const custom = event as CustomEvent<ThemePreference>;
@@ -121,6 +169,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     window.addEventListener(SYNC_STATUS_EVENT, handleSyncEvent);
 
     const handleDbMutated = () => {
+      void refreshMetricsAndReminder();
       scheduleBackgroundCloudSync(2500);
     };
     window.addEventListener(DB_MUTATED_EVENT, handleDbMutated);
@@ -148,12 +197,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
+      window.clearInterval(reminderInterval);
       window.removeEventListener(THEME_CHANGE_EVENT, handleThemeEvent);
       window.removeEventListener(SYNC_STATUS_EVENT, handleSyncEvent);
       window.removeEventListener(DB_MUTATED_EVENT, handleDbMutated);
       unsubAuth?.();
     };
-  }, []);
+  }, [router]);
 
   const handleCycleTheme = async () => {
     const next = nextThemePreference(theme);
@@ -197,16 +247,28 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="flex-1 min-w-0">
                   <div className="truncate">{item.label}</div>
                 </div>
-                {item.phase && (
+                {item.href === "/srs" && dueCount > 0 ? (
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${
+                    className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold font-mono ${
                       active
-                        ? "bg-white/20 text-white"
-                        : "bg-surface-muted text-foreground/60"
+                        ? "bg-white/25 text-white"
+                        : "bg-accent/15 text-accent"
                     }`}
                   >
-                    P{item.phase}
+                    {dueCount}
                   </span>
+                ) : (
+                  item.phase && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${
+                        active
+                          ? "bg-white/20 text-white"
+                          : "bg-surface-muted text-foreground/60"
+                      }`}
+                    >
+                      P{item.phase}
+                    </span>
+                  )
                 )}
               </Link>
             );

@@ -131,6 +131,8 @@ export interface AppSettings {
   studyGoalFocus?: StudyGoalFocus;
   onboardingCompleted?: boolean;
   onboardingCompletedAt?: string;
+  reminderEnabled?: boolean;
+  reminderTime?: string;
 }
 
 export interface TokenizedWord {

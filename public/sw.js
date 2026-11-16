@@ -1,4 +1,4 @@
-const CACHE_NAME = "kotonoha-studio-v2";
+const CACHE_NAME = "kotonoha-studio-v3";
 const PRECACHE_URLS = [
   "/",
   "/minna",
@@ -11,6 +11,8 @@ const PRECACHE_URLS = [
   "/dictionary",
   "/settings",
   "/auth",
+  "/privacy",
+  "/terms",
   "/manifest.webmanifest",
   "/icon.svg",
   "/icon-192.png",

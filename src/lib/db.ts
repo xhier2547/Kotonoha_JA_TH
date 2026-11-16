@@ -32,6 +32,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dailyMinutes: 20,
   studyGoalFocus: "balanced",
   onboardingCompleted: false,
+  reminderEnabled: false,
+  reminderTime: "20:00",
 };
 
 class KotonohaDatabase extends Dexie {

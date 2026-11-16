@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Award,
+  Bell,
   BookMarked,
   BookOpen,
   Brain,
@@ -350,14 +351,23 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowOnboarding(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-background hover:bg-surface-muted text-xs font-medium self-start sm:self-auto cursor-pointer"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
-              <span>ปรับระดับ &amp; เวลาเรียน</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              <Link
+                href="/settings#reminder"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-background hover:bg-surface-muted text-xs font-medium"
+              >
+                <Bell className="w-3.5 h-3.5 text-primary" />
+                <span>ตั้งเวลาเตือน / .ics</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowOnboarding(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-background hover:bg-surface-muted text-xs font-medium cursor-pointer"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+                <span>ปรับระดับ &amp; เวลาเรียน</span>
+              </button>
+            </div>
           </div>
 
           <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">

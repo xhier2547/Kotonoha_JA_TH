@@ -33,3 +33,10 @@
 - **หมายเหตุเรื่อง AI & Kuromoji**:
   - ฟีเจอร์ AI (Kaiwa, AI Mock Test, AI Weakness Coach) ออกแบบแบบ BYOK — ผู้ใช้แต่ละคนกรอก Gemini/OpenAI API Key ของตนเองใน `/settings` (เก็บในเครื่องผู้ใช้ ไม่ถูกอัปโหลดขึ้น Cloud ตอน Sync เพื่อความปลอดภัยของคีย์)
   - `/api/translate` รองรับการแปลภาษาไทยแบบ Dictionary + Gemini/OpenAI Fallback
+
+## 4. ติดตั้ง Custom Domain (แนะนำสำหรับผู้ใช้จริงในไทย)
+หากต้องการความน่าเชื่อถือและหลีกเลี่ยงกรณี Wi-Fi องค์กร/โรงเรียนในไทยบล็อกโดเมน `*.vercel.app`:
+1. ใน **Vercel -> Project Settings -> Domains** เพิ่มโดเมนของคุณ (เช่น `kotonoha.example.com`) แล้วตั้งค่า `CNAME` / `A Record` ตามค่าที่ Vercel แสดง
+2. ใน **Supabase -> Authentication -> URL Configuration** เปลี่ยน **Site URL** เป็น `https://your-custom-domain.com` และเพิ่ม `https://your-custom-domain.com/**` ใน **Redirect URLs**
+3. ใน **Google Cloud Console -> Google Auth Platform -> Branding** เพิ่มโดเมนใหม่ลงใน **Authorized domains** (และอัปเดต Privacy/Terms URLs ให้ตรงกัน)
+4. เปิดใช้ **Vercel Speed Insights / Web Analytics** ในหน้า Vercel Dashboard เพื่อดูความเร็วโหลดและหน้าที่คนใช้งานมากที่สุดจริง

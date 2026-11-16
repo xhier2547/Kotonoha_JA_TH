@@ -2,17 +2,23 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Download, Save, Sparkles, Upload } from "lucide-react";
+import { Bell, CalendarPlus, Check, Download, Save, Sparkles, Upload } from "lucide-react";
 import {
   DEFAULT_SETTINGS,
   exportDatabaseJson,
   getAppSettings,
+  getLearningSummary,
   importDatabaseJson,
   saveAppSettings,
 } from "@/lib/db";
 import { getJapaneseVoices, speakJapanese } from "@/lib/speech";
 import { broadcastThemePreference } from "@/lib/theme";
 import { DAILY_TIME_OPTIONS, STUDY_FOCUS_OPTIONS } from "@/lib/studyPlan";
+import {
+  buildStudyReminderIcs,
+  parseReminderHHMM,
+  showBrowserStudyNotification,
+} from "@/lib/studyReminder";
 import type {
   AiProvider,
   AppSettings,
@@ -26,6 +32,7 @@ export default function SettingsPage() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [savedNotice, setSavedNotice] = useState(false);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
+  const [reminderNotice, setReminderNotice] = useState<string | null>(null);
 
   useEffect(() => {
     getAppSettings().then(setForm);
@@ -45,6 +52,76 @@ export default function SettingsPage() {
     broadcastThemePreference(form.theme ?? "system");
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 2500);
+  };
+
+  const handleToggleBrowserReminder = async (enabled: boolean) => {
+    setReminderNotice(null);
+    if (!enabled) {
+      setForm((prev) => ({ ...prev, reminderEnabled: false }));
+      return;
+    }
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setReminderNotice(
+        "เบราว์เซอร์นี้ไม่รองรับ Web Notification — แนะนำกดดาวน์โหลดปฏิทิน (.ics) ด้านล่างแทนครับ"
+      );
+      return;
+    }
+    const perm =
+      Notification.permission === "granted"
+        ? "granted"
+        : await Notification.requestPermission();
+    if (perm === "granted") {
+      setForm((prev) => ({ ...prev, reminderEnabled: true }));
+      setReminderNotice("อนุญาตแจ้งเตือนแล้ว! อย่าลืมกด 'บันทึกการตั้งค่า' ด้านล่างด้วยนะครับ");
+    } else {
+      setForm((prev) => ({ ...prev, reminderEnabled: false }));
+      setReminderNotice(
+        "สิทธิ์แจ้งเตือนถูกปิดไว้ในเบราว์เซอร์ — คุณยังสามารถดาวน์โหลดไฟล์ปฏิทิน (.ics) เพื่อตั้งเตือนรายวันได้ฟรีครับ"
+      );
+    }
+  };
+
+  const handleTestReminder = async () => {
+    setReminderNotice(null);
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setReminderNotice("เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนโดยตรง");
+      return;
+    }
+    if (Notification.permission !== "granted") {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") {
+        setReminderNotice("กรุณาอนุญาตการแจ้งเตือนในเบราว์เซอร์ก่อนทดสอบครับ");
+        return;
+      }
+    }
+    const summary = await getLearningSummary();
+    const sent = showBrowserStudyNotification({
+      dueCount: summary.dueCount,
+      dailyMinutes: form.dailyMinutes,
+      learnerLevel: form.learnerLevel,
+    });
+    setReminderNotice(
+      sent ? "ส่งการแจ้งเตือนทดสอบแล้ว!" : "ไม่สามารถแสดงการแจ้งเตือนได้"
+    );
+  };
+
+  const handleDownloadIcs = () => {
+    const icsText = buildStudyReminderIcs({
+      timeHHMM: form.reminderTime ?? "20:00",
+      dailyMinutes: form.dailyMinutes ?? 20,
+      learnerLevel: form.learnerLevel,
+      appOrigin: typeof window !== "undefined" ? window.location.origin : undefined,
+    });
+    const blob = new Blob([icsText], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kotonoha-reminder-${form.learnerLevel.toLowerCase()}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setReminderNotice(
+      "ดาวน์โหลดไฟล์ปฏิทิน .ics แล้ว! เปิดไฟล์เพื่อเพิ่มเตือนฝึกทุกวันลง Google Calendar / Apple Calendar ได้เลย"
+    );
   };
 
   const handleExport = async () => {
@@ -354,6 +431,74 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Study Reminder & Calendar */}
+        <section
+          id="reminder"
+          className="rounded-2xl border border-border bg-surface p-5 sm:p-6 space-y-4 scroll-mt-24"
+        >
+          <div className="flex items-center gap-2">
+            <Bell className="w-4 h-4 text-primary" />
+            <h2 className="font-bold text-base">
+              4. แจ้งเตือนฝึกภาษาญี่ปุ่นรายวัน &amp; ปฏิทิน (.ics)
+            </h2>
+          </div>
+          <p className="text-xs text-foreground/70 leading-relaxed">
+            ช่วยให้ไม่ลืมกลับมาทบทวน FSRS เพื่อรักษา Streak ต่อเนื่อง: เปิดแจ้งเตือนเมื่อเปิดเว็บ หรือส่งออกนัดหมายประจำวันลง Google/Apple Calendar
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+            <label className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3 cursor-pointer">
+              <div className="text-xs">
+                <div className="font-semibold text-sm">เปิดแจ้งเตือนเมื่อมีคำรอทบทวน</div>
+                <div className="text-foreground/65 mt-0.5">
+                  เตือน 1 ครั้ง/วัน เมื่อถึงเวลาที่กำหนดและเปิดแอปอยู่
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={Boolean(form.reminderEnabled)}
+                onChange={(e) => void handleToggleBrowserReminder(e.target.checked)}
+                className="w-4 h-4 accent-primary cursor-pointer"
+              />
+            </label>
+
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium block">เวลาเตือนประจำวัน</span>
+              <input
+                type="time"
+                value={parseReminderHHMM(form.reminderTime).formatted}
+                onChange={(e) =>
+                  setForm({ ...form, reminderTime: e.target.value || "20:00" })
+                }
+                className="w-full px-3.5 py-2 rounded-xl border border-border bg-background"
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => void handleTestReminder()}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-background hover:bg-surface-muted text-xs font-medium cursor-pointer"
+            >
+              <Bell className="w-3.5 h-3.5 text-primary" />
+              <span>ทดสอบแจ้งเตือนทันที</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadIcs}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 text-xs font-semibold cursor-pointer"
+            >
+              <CalendarPlus className="w-3.5 h-3.5" />
+              <span>ดาวน์โหลดปฏิทินเตือนทุกวัน (.ics)</span>
+            </button>
+          </div>
+
+          {reminderNotice && (
+            <div className="text-xs text-primary font-medium">{reminderNotice}</div>
+          )}
+        </section>
+
         <div className="flex items-center gap-3">
           <button
             type="submit"
@@ -373,7 +518,7 @@ export default function SettingsPage() {
 
       {/* Backup & Restore */}
       <section className="rounded-2xl border border-border bg-surface p-5 sm:p-6 space-y-4">
-        <h2 className="font-bold text-base">4. สำรองและกู้คืนข้อมูล (Export / Import JSON)</h2>
+        <h2 className="font-bold text-base">5. สำรองและกู้คืนข้อมูล (Export / Import JSON)</h2>
         <p className="text-xs text-foreground/70">
           ส่งออกและกู้คืนข้อมูลครบทั้ง 10 ตาราง: การ์ด FSRS, ประวัติการทบทวน (Memory Curve), Kana, บทอ่าน, Kaiwa, Shadowing, Minna 50 บท และประวัติข้อสอบ JLPT
         </p>

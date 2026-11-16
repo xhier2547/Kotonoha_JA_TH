@@ -47,6 +47,11 @@ const {
   sortFreshCardsByLevel,
 } = require("../.test-dist/lib/studyPlan.js");
 const { resolveAccountSyncStrategy } = require("../.test-dist/lib/accountIsolation.js");
+const {
+  buildStudyReminderIcs,
+  parseReminderHHMM,
+  shouldTriggerReminderToday,
+} = require("../.test-dist/lib/studyReminder.js");
 
 // Check for Unicode emojis while allowing standard JLPT `★` (U+2605) sentence-ordering marker
 const EMOJI_REGEX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{2604}\u{2606}-\u{27BF}]/u;
@@ -483,4 +488,66 @@ test("Placement mini-quiz maps scores cleanly without emojis", () => {
     PLACEMENT_QUIZ_QUESTIONS.map((q) => [q.id, q.correctIndex])
   );
   assert.equal(evaluatePlacementQuiz(perfectAnswers).recommendedTrack, "n2");
+});
+
+test("Daily study reminder scheduler and RFC 5545 ICS calendar export", () => {
+  assert.deepEqual(parseReminderHHMM("invalid"), {
+    hour: 20,
+    minute: 0,
+    formatted: "20:00",
+  });
+  assert.deepEqual(parseReminderHHMM("7:05"), {
+    hour: 7,
+    minute: 5,
+    formatted: "07:05",
+  });
+
+  const night = new Date(2026, 10, 17, 20, 15, 0);
+  const morning = new Date(2026, 10, 17, 9, 0, 0);
+  assert.equal(
+    shouldTriggerReminderToday({
+      enabled: true,
+      reminderTime: "20:00",
+      dueCount: 5,
+      lastRemindedDayKey: null,
+      todayKey: "2026-11-17",
+      now: night,
+    }),
+    true
+  );
+  assert.equal(
+    shouldTriggerReminderToday({
+      enabled: true,
+      reminderTime: "20:00",
+      dueCount: 5,
+      lastRemindedDayKey: "2026-11-17",
+      todayKey: "2026-11-17",
+      now: night,
+    }),
+    false
+  );
+  assert.equal(
+    shouldTriggerReminderToday({
+      enabled: true,
+      reminderTime: "20:00",
+      dueCount: 5,
+      lastRemindedDayKey: null,
+      todayKey: "2026-11-17",
+      now: morning,
+    }),
+    false
+  );
+
+  const ics = buildStudyReminderIcs({
+    timeHHMM: "20:30",
+    dailyMinutes: 30,
+    learnerLevel: "N3",
+    appOrigin: "https://kotonohajath.vercel.app/",
+    now: new Date(2026, 10, 17, 10, 0, 0),
+  });
+  assert.ok(ics.includes("BEGIN:VCALENDAR\r\n"));
+  assert.ok(ics.includes("RRULE:FREQ=DAILY\r\n"));
+  assert.ok(ics.includes("DURATION:PT30M\r\n"));
+  assert.ok(ics.includes("URL:https://kotonohajath.vercel.app/srs\r\n"));
+  assert.equal(EMOJI_REGEX.test(ics), false);
 });
