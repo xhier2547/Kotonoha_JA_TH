@@ -12,7 +12,9 @@ import {
   LogIn,
   LogOut,
   RefreshCw,
+  Save,
   ShieldCheck,
+  Trash2,
   UserCheck,
   UserPlus,
   Wrench,
@@ -23,8 +25,16 @@ import {
   getUserDisplayName,
   isSupabaseConfigured,
 } from "@/lib/supabase";
-import { getAppSettings } from "@/lib/db";
-import { pullProgressFromCloud, pushProgressToCloud } from "@/lib/cloudSync";
+import { getAppSettings, resetLocalStudyData } from "@/lib/db";
+import { writeActiveAccountOwner } from "@/lib/accountIsolation";
+import {
+  deleteCloudStudyData,
+  fetchProfileFromCloud,
+  pullProgressFromCloud,
+  pushProgressToCloud,
+  syncProfileToCloud,
+  type CloudProfileRecord,
+} from "@/lib/cloudSync";
 import { CrestSealIcon } from "@/components/LuxuryIcons";
 
 type AuthMode = "signin" | "signup";
@@ -66,6 +76,11 @@ export default function AuthPage() {
   const [submitting, setSubmitting] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [cloudProfile, setCloudProfile] = useState<CloudProfileRecord | null>(null);
+  const [profileNameDraft, setProfileNameDraft] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [confirmDeleteCloud, setConfirmDeleteCloud] = useState(false);
+  const [deletingCloud, setDeletingCloud] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const manualAuthRef = useRef(false);
@@ -76,10 +91,19 @@ export default function AuthPage() {
     if (!client) return;
 
     let active = true;
-    void client.auth.getUser().then(({ data }) => {
+    void client.auth.getUser().then(async ({ data }) => {
       if (!active) return;
-      setUser(data.user ?? null);
-      setLoadingUser(false);
+      const u = data.user ?? null;
+      setUser(u);
+      if (u) {
+        setProfileNameDraft(getUserDisplayName(u));
+        const profile = await fetchProfileFromCloud();
+        if (active && profile) {
+          setCloudProfile(profile);
+          if (profile.display_name) setProfileNameDraft(profile.display_name);
+        }
+      }
+      if (active) setLoadingUser(false);
 
       if (typeof window !== "undefined") {
         const searchParams = new URLSearchParams(window.location.search);
@@ -98,6 +122,11 @@ export default function AuthPage() {
     const { data: sub } = client.auth.onAuthStateChange((event, session) => {
       const nextUser = session?.user ?? null;
       setUser(nextUser);
+      if (nextUser) {
+        setProfileNameDraft(getUserDisplayName(nextUser));
+      } else {
+        setCloudProfile(null);
+      }
 
       // Auto-merge once when returning from Google OAuth redirect.
       if (
@@ -110,17 +139,27 @@ export default function AuthPage() {
         void pullProgressFromCloud("merge")
           .then(async (pulled) => {
             if (!active) return;
-            const latest = await getAppSettings();
+            const [latest, profile] = await Promise.all([
+              getAppSettings(),
+              fetchProfileFromCloud(),
+            ]);
             if (!active) return;
+            if (profile) setCloudProfile(profile);
             if (!latest.onboardingCompleted) {
               router.push("/?onboarding=1");
               return;
             }
-            setMessage(
-              pulled.hasCloudData
-                ? "เข้าสู่ระบบและรวมข้อมูลจาก Cloud + เครื่องนี้เรียบร้อยแล้ว!"
-                : "เข้าสู่ระบบและอัปโหลดความคืบหน้าของคุณขึ้น Cloud เรียบร้อยแล้ว!"
-            );
+            if (pulled.switchedAccountReset) {
+              setMessage(
+                "ตรวจพบการเปลี่ยนบัญชี — ระบบล้างข้อมูลบัญชีเดิมในเครื่องและโหลดข้อมูลจาก Cloud ของคุณเรียบร้อยแล้ว!"
+              );
+            } else {
+              setMessage(
+                pulled.hasCloudData
+                  ? "เข้าสู่ระบบและรวมข้อมูลจาก Cloud + เครื่องนี้เรียบร้อยแล้ว!"
+                  : "เข้าสู่ระบบและอัปโหลดความคืบหน้าของคุณขึ้น Cloud เรียบร้อยแล้ว!"
+              );
+            }
           })
           .catch(() => {
             // Keep session active; user can retry sync manually if needed
@@ -210,8 +249,12 @@ export default function AuthPage() {
         if (error) throw error;
 
         if (data.session) {
-          await pushProgressToCloud();
-          const latest = await getAppSettings();
+          await pullProgressFromCloud("merge");
+          const [latest, profile] = await Promise.all([
+            getAppSettings(),
+            fetchProfileFromCloud(),
+          ]);
+          if (profile) setCloudProfile(profile);
           if (!latest.onboardingCompleted) {
             router.push("/?onboarding=1");
             return;
@@ -230,16 +273,26 @@ export default function AuthPage() {
         if (error) throw error;
 
         const pulled = await pullProgressFromCloud("merge");
-        const latest = await getAppSettings();
+        const [latest, profile] = await Promise.all([
+          getAppSettings(),
+          fetchProfileFromCloud(),
+        ]);
+        if (profile) setCloudProfile(profile);
         if (!latest.onboardingCompleted) {
           router.push("/?onboarding=1");
           return;
         }
-        setMessage(
-          pulled.hasCloudData
-            ? "เข้าสู่ระบบและรวมข้อมูลจาก Cloud + เครื่องนี้เรียบร้อยแล้ว!"
-            : "เข้าสู่ระบบและอัปโหลดความคืบหน้าของคุณขึ้น Cloud เรียบร้อยแล้ว!"
-        );
+        if (pulled.switchedAccountReset) {
+          setMessage(
+            "ตรวจพบการเปลี่ยนบัญชี — ระบบล้างข้อมูลบัญชีเดิมในเครื่องและโหลดข้อมูลจาก Cloud ของบัญชีนี้เรียบร้อยแล้ว!"
+          );
+        } else {
+          setMessage(
+            pulled.hasCloudData
+              ? "เข้าสู่ระบบและรวมข้อมูลจาก Cloud + เครื่องนี้เรียบร้อยแล้ว!"
+              : "เข้าสู่ระบบและอัปโหลดความคืบหน้าของคุณขึ้น Cloud เรียบร้อยแล้ว!"
+          );
+        }
       }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการยืนยันตัวตน");
@@ -274,11 +327,60 @@ export default function AuthPage() {
     }
   };
 
-  const handleSignOut = async () => {
+  const handleSaveProfileName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const client = getSupabaseClient();
+    const trimmed = profileNameDraft.trim();
+    if (!client || !user || !trimmed) return;
+
+    setErrorMsg(null);
+    setMessage(null);
+    setSavingProfile(true);
+    try {
+      const { data, error } = await client.auth.updateUser({
+        data: { display_name: trimmed },
+      });
+      if (error) throw error;
+      if (data.user) setUser(data.user);
+
+      const synced = await syncProfileToCloud({ displayName: trimmed });
+      if (synced) setCloudProfile(synced);
+      setMessage("อัปเดตชื่อโปรไฟล์และซิงค์ขึ้น Supabase แล้ว!");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "อัปเดตชื่อโปรไฟล์ไม่สำเร็จ");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleSignOut = async (wipeLocal: boolean) => {
     const client = getSupabaseClient();
     if (!client) return;
+    setErrorMsg(null);
+    setMessage(null);
     await client.auth.signOut();
-    setMessage("ออกจากระบบแล้ว — คุณยังใช้งานโหมด Guest ในเครื่องนี้ต่อได้ทันที");
+    if (wipeLocal) {
+      await resetLocalStudyData({ preserveApiKey: true });
+      writeActiveAccountOwner(null);
+      setMessage("ออกจากระบบและล้างข้อมูลการเรียนในเครื่องนี้เรียบร้อยแล้ว (เหมาะสำหรับเครื่องสาธารณะ/สลับบัญชี)");
+    } else {
+      setMessage("ออกจากระบบแล้ว — คุณยังใช้งานโหมด Guest ในเครื่องนี้ต่อได้ทันที");
+    }
+  };
+
+  const handleDeleteCloudData = async () => {
+    setErrorMsg(null);
+    setMessage(null);
+    setDeletingCloud(true);
+    try {
+      await deleteCloudStudyData();
+      setConfirmDeleteCloud(false);
+      setMessage("ลบข้อมูลการเรียนบน Cloud (user_study_data) ของบัญชีนี้เรียบร้อยแล้ว");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "ลบข้อมูลบน Cloud ไม่สำเร็จ");
+    } finally {
+      setDeletingCloud(false);
+    }
   };
 
   const hasGoogleLinked = Boolean(
@@ -385,13 +487,20 @@ export default function AuthPage() {
                 <UserCheck className="w-6 h-6" strokeWidth={1.6} />
               </div>
               <div>
-                <div className="text-sm font-bold">{getUserDisplayName(user)}</div>
+                <div className="text-sm font-bold">
+                  {cloudProfile?.display_name || getUserDisplayName(user)}
+                </div>
                 <div className="text-xs text-foreground/65">{user.email}</div>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <span className="inline-flex items-center gap-1 text-[11px] text-matcha font-medium">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>เชื่อมต่อ Cloud Sync อัตโนมัติแล้ว</span>
                   </span>
+                  {cloudProfile?.learner_level && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-primary/25 bg-primary/10 text-primary text-[11px] font-semibold">
+                      ระดับ {cloudProfile.learner_level}
+                    </span>
+                  )}
                   {hasGoogleLinked && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border bg-background text-[11px] font-medium">
                       <GoogleGIcon className="w-3 h-3" />
@@ -417,14 +526,50 @@ export default function AuthPage() {
 
               <button
                 type="button"
-                onClick={() => void handleSignOut()}
+                onClick={() => void handleSignOut(false)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border hover:bg-surface-muted text-xs font-medium text-foreground/80 cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>ออกจากระบบ</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => void handleSignOut(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-500/35 text-rose-600 dark:text-rose-300 hover:bg-rose-500/10 text-xs font-medium cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>ออก + ล้างข้อมูลเครื่อง</span>
+              </button>
             </div>
           </div>
+
+          <form
+            onSubmit={(e) => void handleSaveProfileName(e)}
+            className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2.5 pt-3 border-t border-border/80"
+          >
+            <label className="flex-1 space-y-1 text-xs">
+              <span className="font-medium text-foreground/75">
+                ชื่อโปรไฟล์สมาชิก (บันทึกลง Supabase `profiles`)
+              </span>
+              <input
+                type="text"
+                value={profileNameDraft}
+                onChange={(e) => setProfileNameDraft(e.target.value)}
+                required
+                placeholder="ชื่อที่แสดงในระบบ"
+                className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={savingProfile || !profileNameDraft.trim()}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border bg-background hover:bg-surface-muted text-xs font-semibold disabled:opacity-50 cursor-pointer shrink-0"
+            >
+              <Save className="w-3.5 h-3.5 text-primary" />
+              <span>{savingProfile ? "กำลังบันทึก..." : "บันทึกชื่อโปรไฟล์"}</span>
+            </button>
+          </form>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-border/80">
             <button
@@ -458,9 +603,39 @@ export default function AuthPage() {
             </button>
           </div>
 
-          <p className="text-[11px] text-foreground/60 leading-relaxed">
-            หมายเหตุความปลอดภัย: ระบบ Cloud Sync จะไม่ส่งรหัส API Key ของ AI (Gemini/OpenAI) ออกจากเครื่องของคุณ เพื่อความปลอดภัยส่วนตัวเมื่อทดลองบนเครื่องสาธารณะ
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/80">
+            <p className="text-[11px] text-foreground/60 leading-relaxed max-w-md">
+              หมายเหตุความปลอดภัย: ระบบ Cloud Sync จะไม่ส่งรหัส AI API Key ของ AI (Gemini/OpenAI) ออกจากเครื่อง และจะแยกข้อมูลอัตโนมัติหากมีการสลับบัญชีคนละคนในเบราว์เซอร์เดียวกัน
+            </p>
+
+            {!confirmDeleteCloud ? (
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteCloud(true)}
+                className="text-[11px] text-rose-600 dark:text-rose-300 hover:underline underline-offset-2 cursor-pointer shrink-0"
+              >
+                ล้างข้อมูลการเรียนบน Cloud
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={deletingCloud}
+                  onClick={() => void handleDeleteCloudData()}
+                  className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-medium disabled:opacity-50 cursor-pointer"
+                >
+                  {deletingCloud ? "กำลังลบ..." : "ยืนยันลบข้อมูล Cloud"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteCloud(false)}
+                  className="px-2.5 py-1 rounded-lg border border-border text-[11px] cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            )}
+          </div>
         </section>
       ) : (
         <section className="rounded-2xl border border-border bg-surface p-6 space-y-5 shadow-xs">

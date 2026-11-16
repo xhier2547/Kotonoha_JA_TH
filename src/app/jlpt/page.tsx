@@ -38,6 +38,7 @@ import {
   mineCardToSrs,
   saveJlptAttempt,
 } from "@/lib/db";
+import { JLPT_DRAFTS_STORAGE_KEY } from "@/lib/accountIsolation";
 import { findKanjiMatches, findVocabMatch } from "@/lib/vocabLookup";
 import { translateJaToTh } from "@/lib/localTranslate";
 import { InteractiveJapaneseText } from "@/components/InteractiveJapaneseText";
@@ -47,7 +48,7 @@ import { speakJapanese, speakJapaneseDialogue, stopSpeaking } from "@/lib/speech
 import type { JlptAttemptRecord, JlptLevel, TokenizedWord } from "@/types/learning";
 
 const LEVELS: JlptLevel[] = ["N5", "N4", "N3", "N2", "N1"];
-const JLPT_DRAFTS_KEY = "kotonoha_jlpt_drafts_v1";
+const JLPT_DRAFTS_KEY = JLPT_DRAFTS_STORAGE_KEY;
 
 interface JlptExamDraft {
   examId: string;

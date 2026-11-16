@@ -13,6 +13,7 @@ import type {
   StoredKaiwaMessage,
 } from "@/types/learning";
 import { CORE_GRAMMAR, CORE_KANJI, CORE_VOCAB, GRADED_PASSAGES } from "@/data/coreCurriculum";
+import { clearJlptLocalDrafts } from "@/lib/accountIsolation";
 import { createInitialFsrsCard } from "@/lib/fsrs";
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -493,6 +494,58 @@ export async function importDatabaseSnapshot(
 export async function importDatabaseJson(jsonText: string) {
   const parsed = JSON.parse(jsonText) as Partial<DatabaseSnapshot>;
   return importDatabaseSnapshot(parsed);
+}
+
+/** Wipes all user learning tables and re-seeds clean starter content for Guest/account switch. */
+export async function resetLocalStudyData(options?: {
+  preserveApiKey?: boolean;
+}): Promise<void> {
+  const previousSettings = options?.preserveApiKey
+    ? await db.settings.get("user_settings")
+    : undefined;
+
+  await db.transaction(
+    "rw",
+    [
+      db.cards,
+      db.reviewLogs,
+      db.settings,
+      db.kanaMastery,
+      db.passages,
+      db.kaiwaHistory,
+      db.customScenarios,
+      db.shadowingQueue,
+      db.minnaProgress,
+      db.jlptAttempts,
+    ],
+    async () => {
+      await db.cards.clear();
+      await db.reviewLogs.clear();
+      await db.settings.clear();
+      await db.kanaMastery.clear();
+      await db.passages.clear();
+      await db.kaiwaHistory.clear();
+      await db.customScenarios.clear();
+      await db.shadowingQueue.clear();
+      await db.minnaProgress.clear();
+      await db.jlptAttempts.clear();
+    }
+  );
+
+  seedPromise = null;
+  await ensureSeeded();
+
+  if (options?.preserveApiKey && previousSettings) {
+    await db.settings.put({
+      ...DEFAULT_SETTINGS,
+      aiProvider: previousSettings.aiProvider,
+      apiKey: previousSettings.apiKey,
+      aiModel: previousSettings.aiModel,
+      theme: previousSettings.theme ?? DEFAULT_SETTINGS.theme,
+    });
+  }
+
+  clearJlptLocalDrafts();
 }
 
 export async function getKaiwaHistory(scenarioId: string): Promise<StoredKaiwaMessage[]> {

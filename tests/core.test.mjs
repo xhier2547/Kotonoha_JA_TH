@@ -44,6 +44,7 @@ const {
   computeDailyStudyPlan,
   sortFreshCardsByLevel,
 } = require("../.test-dist/lib/studyPlan.js");
+const { resolveAccountSyncStrategy } = require("../.test-dist/lib/accountIsolation.js");
 
 // Check for Unicode emojis while allowing standard JLPT `★` (U+2605) sentence-ordering marker
 const EMOJI_REGEX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{2604}\u{2606}-\u{27BF}]/u;
@@ -444,4 +445,18 @@ test("Onboarding study plan computes real settings, exact time blocks, and level
     "N3"
   );
   assert.equal(sortedForN3[0].id, "c");
+});
+
+test("Account switch sync strategy isolates shared browsers while preserving guest data", () => {
+  // Unclaimed browser (guest) keeps local progress when claiming an account
+  assert.equal(resolveAccountSyncStrategy(null, "user-a", false), "push_local_to_cloud");
+  assert.equal(resolveAccountSyncStrategy(null, "user-a", true), "merge_local_and_cloud");
+
+  // Same user returning merges normally
+  assert.equal(resolveAccountSyncStrategy("user-a", "user-a", true), "merge_local_and_cloud");
+  assert.equal(resolveAccountSyncStrategy("user-a", "user-a", false), "push_local_to_cloud");
+
+  // Different user signing into shared browser never leaks previous owner's local data
+  assert.equal(resolveAccountSyncStrategy("user-a", "user-b", true), "replace_with_cloud");
+  assert.equal(resolveAccountSyncStrategy("user-a", "user-b", false), "reset_and_push_fresh");
 });

@@ -20,6 +20,7 @@
     "src/lib/vocabLookup.ts",
     "src/lib/supabaseConfig.ts",
     "src/lib/studyPlan.ts",
+    "src/lib/accountIsolation.ts",
     "src/data/coreCurriculum.ts",
     "src/data/strokeOrders.ts",
     "src/data/minnaNoNihongo.ts",
