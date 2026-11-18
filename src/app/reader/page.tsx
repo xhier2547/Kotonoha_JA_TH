@@ -27,6 +27,7 @@ import { translateJaToTh } from "@/lib/localTranslate";
 import { PitchAccentChart } from "@/components/PitchAccentChart";
 import { SpeakButton } from "@/components/SpeakButton";
 import { VocabVisualCard, hasBuiltInVisual } from "@/components/VocabVisualCard";
+import { StudyPageHero } from "@/components/StudyPageHero";
 import {
   compressImageFileToDataUrl,
   extractImageFromClipboard,
@@ -323,27 +324,23 @@ export default function ReaderPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-primary uppercase tracking-wider">
-            Phase 3 • Comprehensible Input (i+1) & Sentence Mining
-          </div>
-          <h1 className="text-2xl font-bold mt-0.5">Immersion Reader & Sentence Miner</h1>
-          <p className="text-sm text-foreground/70 mt-1">
-            ตัดคำภาษาญี่ปุ่นอัตโนมัติด้วย Kuromoji คลิกคำศัพท์เพื่อดูความหมายและบันทึกทั้งประโยคลง FSRS
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowCustomInput((s) => !s)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-sm font-medium self-start cursor-pointer"
-        >
-          <FilePlus2 className="w-4 h-4 text-primary" />
-          <span>วางข้อความ / นำเข้าซับ .SRT</span>
-        </button>
-      </div>
+      <StudyPageHero
+        tone="matcha"
+        kanjiWatermark="読解"
+        eyebrow="Phase 3 • Comprehensible Input (i+1) & Sentence Mining"
+        title="Immersion Reader & Sentence Miner"
+        subtitle="ตัดคำภาษาญี่ปุ่นอัตโนมัติด้วย Kuromoji คลิกคำศัพท์เพื่อดูความหมายและบันทึกทั้งประโยคลง FSRS"
+        actions={
+          <button
+            type="button"
+            onClick={() => setShowCustomInput((s) => !s)}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white text-xs sm:text-sm font-semibold backdrop-blur-xs cursor-pointer transition-colors"
+          >
+            <FilePlus2 className="w-4 h-4 text-emerald-200" />
+            <span>วางข้อความ / นำเข้าซับ .SRT</span>
+          </button>
+        }
+      />
 
       {/* Custom Text & Subtitle Input Drawer */}
       {showCustomInput && (

@@ -68,6 +68,7 @@ import {
   HankoStampBadge,
   SakuraConfettiBurst,
 } from "@/components/CelebrationEffects";
+import { StudyPageHero } from "@/components/StudyPageHero";
 import type { CardType, JlptLevel, SrsCardRecord } from "@/types/learning";
 
 type SrsTab = "review" | "curve" | "conjugation" | "particles" | "deck";
@@ -575,44 +576,41 @@ export default function SrsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-primary uppercase tracking-wider">
-            Phase 2 • FSRS-7 Memory Engine & Muscle Memory
-          </div>
-          <h1 className="text-2xl font-bold mt-0.5">คลังสมอง FSRS & ฝึกผันกริยา</h1>
-          <p className="text-sm text-foreground/70 mt-1">
-            ทบทวนศัพท์ คันจิ ไวยากรณ์ และประโยคด้วยอัลกอริทึม FSRS-7 + ฝึกผันกริยาให้คล่องปาก
-          </p>
-        </div>
-
-        <div className="inline-flex flex-wrap rounded-xl border border-border bg-surface p-1 self-start shadow-xs">
-          {[
-            { id: "review", label: "ทบทวนแฟลชการ์ด", icon: FlashcardDeckIcon },
-            { id: "curve", label: "Memory Curve", icon: MemoryCurveIcon },
-            { id: "conjugation", label: "ฝึกผันกริยา", icon: Dumbbell },
-            { id: "particles", label: "ฝึกคำช่วย (助詞)", icon: ListChecks },
-            { id: "deck", label: "คลังการ์ด", icon: BookMarked },
-          ].map((t) => {
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id as SrsTab)}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${tab === t.id
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-foreground/70 hover:text-foreground"
+      <StudyPageHero
+        tone="violet"
+        kanjiWatermark="記憶"
+        eyebrow="Phase 2 • FSRS-7 Memory Engine & Muscle Memory"
+        title="คลังสมอง FSRS & ฝึกผันกริยา"
+        subtitle="ทบทวนศัพท์ คันจิ ไวยากรณ์ และประโยคด้วยอัลกอริทึม FSRS-7 + ฝึกผันกริยาให้คล่องปาก"
+        actions={
+          <div className="inline-flex flex-wrap rounded-2xl border border-white/20 bg-white/10 p-1 backdrop-blur-xs">
+            {[
+              { id: "review", label: "ทบทวนแฟลชการ์ด", icon: FlashcardDeckIcon },
+              { id: "curve", label: "Memory Curve", icon: MemoryCurveIcon },
+              { id: "conjugation", label: "ฝึกผันกริยา", icon: Dumbbell },
+              { id: "particles", label: "ฝึกคำช่วย (助詞)", icon: ListChecks },
+              { id: "deck", label: "คลังการ์ด", icon: BookMarked },
+            ].map((t) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTab(t.id as SrsTab)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                    tab === t.id
+                      ? "bg-white text-[#2d1e57] shadow-xs"
+                      : "text-white/85 hover:bg-white/10"
                   }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        }
+      />
 
       {/* Filter Bar for Review & Deck */}
       {(tab === "review" || tab === "deck") && (

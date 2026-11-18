@@ -36,6 +36,7 @@ import {
   type CloudProfileRecord,
 } from "@/lib/cloudSync";
 import { CrestSealIcon } from "@/components/LuxuryIcons";
+import { StudyPageHero } from "@/components/StudyPageHero";
 
 type AuthMode = "signin" | "signup";
 
@@ -390,27 +391,22 @@ export default function AuthPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold text-primary uppercase tracking-wider">
-            Member Account & Cloud Sync
-          </div>
-          <h1 className="text-2xl font-bold mt-0.5">
-            บัญชีสมาชิก & ซิงค์ความคืบหน้าข้ามเครื่อง
-          </h1>
-          <p className="text-sm text-foreground/70 mt-1">
-            ซิงค์การ์ด FSRS-7, Minna no Nihongo, ผลสอบ JLPT และ Streak ข้ามอุปกรณ์ผ่าน Supabase
-          </p>
-        </div>
-
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-medium shrink-0"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>หน้าหลัก</span>
-        </Link>
-      </div>
+      <StudyPageHero
+        tone="indigo"
+        kanjiWatermark="絆"
+        eyebrow="Member Account & Cloud Sync"
+        title="บัญชีสมาชิก & ซิงค์ความคืบหน้าข้ามเครื่อง"
+        subtitle="ซิงค์การ์ด FSRS-7, Minna no Nihongo, ผลสอบ JLPT และ Streak ข้ามอุปกรณ์ผ่าน Supabase"
+        actions={
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/25 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold shrink-0 backdrop-blur-xs"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>หน้าหลัก</span>
+          </Link>
+        }
+      />
 
       {!configured && (
         <section className="rounded-2xl border border-amber-500/35 bg-amber-500/5 p-5 space-y-3">

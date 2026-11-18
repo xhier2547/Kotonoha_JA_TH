@@ -289,7 +289,11 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Premium Japanese Seigaiha Study Hub Hero */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#162947] via-[#223e6d] to-[#6b2737] bg-seigaiha text-white p-6 sm:p-7 shadow-lg animate-fade-up">
+      <section className="relative overflow-hidden rounded-3xl bg-[#162947] bg-gradient-to-br from-[#162947] via-[#223e6d] to-[#6b2737] text-white p-6 sm:p-7 shadow-lg animate-fade-up">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-seigaiha opacity-85"
+        />
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           {/* Left: Greeting + Rank + XP Progress + Actions */}
           <div className="lg:col-span-7 space-y-4">

@@ -16,6 +16,7 @@ import { KanaWritingCanvas } from "@/components/KanaWritingCanvas";
 import { PitchAccentChart } from "@/components/PitchAccentChart";
 import { SpeakButton } from "@/components/SpeakButton";
 import { VocabVisualCard, hasBuiltInVisual } from "@/components/VocabVisualCard";
+import { StudyPageHero } from "@/components/StudyPageHero";
 import { db, ensureSeeded, mineCardToSrs } from "@/lib/db";
 import { getJlptLevelBadgeStyle } from "@/lib/gamification";
 import type { JlptLevel } from "@/types/learning";
@@ -338,20 +339,17 @@ export default function DictionaryPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="text-xs font-semibold text-primary uppercase tracking-wider">
-          Unified Reference & Kanji Practice
-        </div>
-        <h1 className="text-2xl font-bold mt-0.5">
-          พจนานุกรม คันจิ (Radicals + คัดลายมือ) & ไวยากรณ์
-        </h1>
-        <p className="text-sm text-foreground/70 mt-1">
-          รวมหลักสูตรหลัก, Minna 50 บท และพจนานุกรมสากล{" "}
-          {openStats
-            ? `JMdict (${openStats.jmdictCount.toLocaleString()} คำ) • KANJIDIC2 (${openStats.kanjidicCount.toLocaleString()} คันจิ) • KanjiVG (${openStats.kanjivgCount.toLocaleString()} ลำดับขีด)`
-            : "JMdict (22,600+ คำ) • KANJIDIC2 (2,680+ คันจิ) • KanjiVG"}
-        </p>
-      </div>
+      <StudyPageHero
+        tone="indigo"
+        kanjiWatermark="辞書"
+        eyebrow="Unified Reference & Kanji Practice"
+        title="พจนานุกรม คันจิ (Radicals + คัดลายมือ) & ไวยากรณ์"
+        subtitle={
+          openStats
+            ? `รวมหลักสูตรหลัก, Minna 50 บท และพจนานุกรมสากล JMdict (${openStats.jmdictCount.toLocaleString()} คำ) • KANJIDIC2 (${openStats.kanjidicCount.toLocaleString()} คันจิ) • KanjiVG (${openStats.kanjivgCount.toLocaleString()} ลำดับขีด)`
+            : "รวมหลักสูตรหลัก, Minna 50 บท และพจนานุกรมสากล JMdict (22,600+ คำ) • KANJIDIC2 (2,680+ คันจิ) • KanjiVG"
+        }
+      />
 
       {/* Search + Tabs + JLPT Filter */}
       <div className="space-y-3">

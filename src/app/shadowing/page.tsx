@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { SHADOWING_SENTENCES, type ShadowingItem } from "@/data/coreCurriculum";
 import { PitchAccentChart } from "@/components/PitchAccentChart";
+import { StudyPageHero } from "@/components/StudyPageHero";
 import { speakJapanese, startJapaneseRecognition, stopSpeaking } from "@/lib/speech";
 import {
   deleteQueuedShadowing,
@@ -232,15 +233,13 @@ export default function ShadowingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="text-xs font-semibold text-primary uppercase tracking-wider">
-          Phase 4a • Acoustic Mirroring & Pitch Accent Control
-        </div>
-        <h1 className="text-2xl font-bold mt-0.5">Shadowing & Pitch Accent Studio</h1>
-        <p className="text-sm text-foreground/70 mt-1">
-          ฝึกพูดตามเงาเสียงเจ้าของภาษาทันทีเพื่อสร้างจังหวะ Mora และหางเสียงที่ฟังดูเป็นธรรมชาติ
-        </p>
-      </div>
+      <StudyPageHero
+        tone="violet"
+        kanjiWatermark="発音"
+        eyebrow="Phase 4a • Acoustic Mirroring & Pitch Accent Control"
+        title="Shadowing & Pitch Accent Studio"
+        subtitle="ฝึกพูดตามเงาเสียงเจ้าของภาษาทันทีเพื่อสร้างจังหวะ Mora และหางเสียงที่ฟังดูเป็นธรรมชาติ"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sentence List */}

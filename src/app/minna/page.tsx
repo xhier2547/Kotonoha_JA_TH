@@ -38,6 +38,7 @@ import { SpeakButton } from "@/components/SpeakButton";
 import { VocabVisualCard, hasBuiltInVisual } from "@/components/VocabVisualCard";
 import { FlashcardSessionModal } from "@/components/FlashcardSessionModal";
 import { FlashcardDeckIcon } from "@/components/LuxuryIcons";
+import { StudyPageHero } from "@/components/StudyPageHero";
 import { inferSpeakerGender } from "@/lib/dialogueParser";
 import { speakJapaneseDialogue, stopSpeaking } from "@/lib/speech";
 import type { MinnaProgressRecord, SrsCardRecord } from "@/types/learning";
@@ -321,37 +322,31 @@ export default function MinnaPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-primary uppercase tracking-wider">
-            Textbook Companion • みんなの日本語 (เล่ม 1–2)
+      <StudyPageHero
+        tone="amber"
+        kanjiWatermark="日本"
+        eyebrow="Textbook Companion • みんなの日本語 (เล่ม 1–2)"
+        title="คู่มือเรียนตามหนังสือ Minna no Nihongo"
+        subtitle="อ่านหนังสือคู่กับเว็บได้ทันที: สรุปไวยากรณ์ภาษาไทยแบบเจาะลึก จุดที่คนไทยมักพลาด คำศัพท์ประจำบท และเก็บศัพท์/ไวยากรณ์เข้า FSRS"
+        actions={
+          <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-xs shrink-0 space-y-1.5 backdrop-blur-xs">
+            <div className="font-semibold flex items-center justify-between gap-4 text-white">
+              <span>ความคืบหน้าหนังสือ</span>
+              <span className="text-amber-200 font-bold">
+                {completedCount} / {MINNA_LESSONS.length} บท
+              </span>
+            </div>
+            <div className="w-44 h-2 rounded-full bg-white/20 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-amber-300 to-emerald-400 transition-all"
+                style={{
+                  width: `${Math.round((completedCount / MINNA_LESSONS.length) * 100)}%`,
+                }}
+              />
+            </div>
           </div>
-          <h1 className="text-2xl font-bold mt-0.5">
-            คู่มือเรียนตามหนังสือ Minna no Nihongo
-          </h1>
-          <p className="text-sm text-foreground/70 mt-1">
-            อ่านหนังสือคู่กับเว็บได้ทันที: สรุปไวยากรณ์ภาษาไทยแบบเจาะลึก จุดที่คนไทยมักพลาด คำศัพท์ประจำบท และเก็บศัพท์เพิ่มเข้า FSRS
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-border bg-surface px-4 py-2.5 text-xs shrink-0 space-y-1">
-          <div className="font-semibold flex items-center justify-between gap-4">
-            <span>ความคืบหน้าหนังสือ</span>
-            <span className="text-primary">
-              {completedCount} / {MINNA_LESSONS.length} บท
-            </span>
-          </div>
-          <div className="w-40 h-2 rounded-full bg-surface-muted overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all"
-              style={{
-                width: `${Math.round((completedCount / MINNA_LESSONS.length) * 100)}%`,
-              }}
-            />
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Sidebar: Chapter Selector */}

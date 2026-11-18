@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Award,
   BookOpen,
   Check,
   CheckCircle2,
@@ -49,6 +48,7 @@ import {
 } from "@/components/CelebrationEffects";
 import { getJlptLevelBadgeStyle } from "@/lib/gamification";
 import { CrestSealIcon, FlashcardDeckIcon } from "@/components/LuxuryIcons";
+import { StudyPageHero } from "@/components/StudyPageHero";
 import {
   getJapaneseSpeechCapabilities,
   speakJapanese,
@@ -652,30 +652,22 @@ export default function JlptPage() {
   if (!activeExam) {
     return (
       <div className="space-y-6 animate-fade-up">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary uppercase tracking-wider">
-              <Award className="w-4 h-4" strokeWidth={1.6} />
-              <span>JLPT Full Exam Simulator • N5 – N1</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold mt-0.5 tracking-tight">
-              คลังข้อสอบวัดระดับ JLPT (N5 – N1)
-            </h1>
-            <p className="text-sm text-foreground/70 mt-1 max-w-2xl">
-              ฝึกทำข้อสอบเต็มรูปแบบหลายชุดหลายปี (2012 – 2023) ครบทั้งคำศัพท์ คันจิ ไวยากรณ์ การอ่าน และเสียงฟัง
-              พร้อมปุ่มเปิด-ปิดคำอ่าน (Furigana) และคลิกเก็บคำศัพท์ที่ไม่รู้ลงคลัง FSRS ได้ทันที
-            </p>
-          </div>
-
-          <Link
-            href="/srs?tag=JLPT"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 text-xs sm:text-sm font-medium self-start"
-          >
-            <FlashcardDeckIcon className="w-4 h-4" />
-            <span>ทบทวนแฟลชการ์ดคำศัพท์ JLPT</span>
-          </Link>
-        </div>
+        <StudyPageHero
+          tone="sakura"
+          kanjiWatermark="合格"
+          eyebrow="JLPT Full Exam Simulator • N5 – N1"
+          title="คลังข้อสอบวัดระดับ JLPT (N5 – N1)"
+          subtitle="ฝึกทำข้อสอบเต็มรูปแบบหลายชุดหลายปี (2012 – 2023) ครบทั้งคำศัพท์ คันจิ ไวยากรณ์ การอ่าน และเสียงฟัง พร้อมปุ่มเปิด-ปิดคำอ่าน (Furigana) และคลิกเก็บคำศัพท์/ไวยากรณ์ลงคลัง FSRS"
+          actions={
+            <Link
+              href="/srs?tag=JLPT"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white text-xs sm:text-sm font-semibold backdrop-blur-xs transition-colors"
+            >
+              <FlashcardDeckIcon className="w-4 h-4 text-amber-200" />
+              <span>ทบทวนแฟลชการ์ดคำศัพท์ JLPT</span>
+            </Link>
+          }
+        />
 
         {/* Level Selector */}
         <div className="flex flex-wrap gap-2">

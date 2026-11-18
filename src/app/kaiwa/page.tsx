@@ -37,6 +37,7 @@ import {
 import { PitchAccentChart } from "@/components/PitchAccentChart";
 import { SpeakButton } from "@/components/SpeakButton";
 import { VocabVisualCard, hasBuiltInVisual } from "@/components/VocabVisualCard";
+import { StudyPageHero } from "@/components/StudyPageHero";
 import { startGeminiLiveSession, type GeminiLiveSession } from "@/lib/geminiLive";
 import {
   fetchJapaneseReading,
@@ -973,74 +974,64 @@ export default function KaiwaPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-primary uppercase tracking-wider">
-            Phase 4b • Conversational Fluency & Naturalness Coach
-          </div>
-          <h1 className="text-2xl font-bold mt-0.5">คู่สนทนา AI Kaiwa (会話スタジオ)</h1>
-          <p className="text-sm text-foreground/70 mt-1">
-            ฝึกพูดโต้ตอบตามสถานการณ์จริง พร้อมคำแนะนำวิธีพูดให้เป็นธรรมชาติแบบคนญี่ปุ่น
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 self-start">
-          {isLiveAi && settings?.aiProvider === "gemini" && (
-            <button
-              type="button"
-              onClick={toggleLiveCall}
-              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors cursor-pointer ${
-                liveStatus === "idle"
-                  ? "bg-primary text-primary-foreground border-primary hover:opacity-95"
-                  : liveStatus === "connecting"
-                    ? "bg-gold/15 border-gold text-gold animate-pulse"
-                    : "bg-rose-600 text-white border-rose-600"
-              }`}
-              title="สนทนาเสียงสด Real-time ผ่าน Gemini Live WebSocket"
+      <StudyPageHero
+        tone="sakura"
+        kanjiWatermark="会話"
+        eyebrow="Phase 4b • Conversational Fluency & Naturalness Coach"
+        title="คู่สนทนา AI Kaiwa (会話スタジオ)"
+        subtitle="ฝึกพูดโต้ตอบตามสถานการณ์จริง พร้อมคำแนะนำวิธีพูดให้เป็นธรรมชาติแบบคนญี่ปุ่น"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {isLiveAi && settings?.aiProvider === "gemini" && (
+              <button
+                type="button"
+                onClick={toggleLiveCall}
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border transition-colors cursor-pointer ${
+                  liveStatus === "idle"
+                    ? "bg-white text-[#5b1d2e] border-white hover:bg-white/90"
+                    : liveStatus === "connecting"
+                      ? "bg-amber-400/20 border-amber-300 text-amber-200 animate-pulse"
+                      : "bg-rose-600 text-white border-rose-400"
+                }`}
+                title="สนทนาเสียงสด Real-time ผ่าน Gemini Live WebSocket"
+              >
+                {liveStatus === "idle" ? (
+                  <>
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>โทรคุยสด (Gemini Live)</span>
+                  </>
+                ) : liveStatus === "connecting" ? (
+                  <>
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>กำลังต่อ Live...</span>
+                  </>
+                ) : (
+                  <>
+                    <PhoneOff className="w-3.5 h-3.5" />
+                    <span>วางสาย Live</span>
+                  </>
+                )}
+              </button>
+            )}
+            <span className="text-xs font-medium px-3 py-2 rounded-xl border border-white/20 bg-white/10 text-white backdrop-blur-xs">
+              {isLiveAi
+                ? `Live AI: ${settings?.aiProvider.toUpperCase()}${
+                    lastLatencyMs !== null
+                      ? ` (${(lastLatencyMs / 1000).toFixed(1)}s)`
+                      : ""
+                  }`
+                : "โหมดจำลองออฟไลน์ (ฟรี)"}
+            </span>
+            <Link
+              href="/settings"
+              className="p-2 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white"
+              title="ตั้งค่า AI API Key"
             >
-              {liveStatus === "idle" ? (
-                <>
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>โทรคุยสด (Gemini Live)</span>
-                </>
-              ) : liveStatus === "connecting" ? (
-                <>
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>กำลังต่อ Live...</span>
-                </>
-              ) : (
-                <>
-                  <PhoneOff className="w-3.5 h-3.5" />
-                  <span>วางสาย Live</span>
-                </>
-              )}
-            </button>
-          )}
-          <span
-            className={`text-xs font-medium px-3 py-1.5 rounded-xl border ${
-              isLiveAi
-                ? "bg-matcha/10 border-matcha/30 text-matcha"
-                : "bg-gold/10 border-gold/30 text-gold"
-            }`}
-          >
-            {isLiveAi
-              ? `Live AI: ${settings?.aiProvider.toUpperCase()}${
-                  lastLatencyMs !== null
-                    ? ` (${(lastLatencyMs / 1000).toFixed(1)}s)`
-                    : ""
-                }`
-              : "โหมดจำลองออฟไลน์ (ฟรี)"}
-          </span>
-          <Link
-            href="/settings"
-            className="p-2 rounded-xl border border-border bg-surface hover:bg-surface-muted"
-            title="ตั้งค่า AI API Key"
-          >
-            <Settings className="w-4 h-4" />
-          </Link>
-        </div>
-      </div>
+              <Settings className="w-4 h-4" />
+            </Link>
+          </div>
+        }
+      />
 
       {/* Scenario Selector */}
       <div className="flex flex-wrap items-center gap-2">

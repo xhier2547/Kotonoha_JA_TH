@@ -9,6 +9,7 @@ import { speakJapanese } from "@/lib/speech";
 import { PitchAccentChart } from "@/components/PitchAccentChart";
 import { SpeakButton } from "@/components/SpeakButton";
 import { KanaWritingCanvas } from "@/components/KanaWritingCanvas";
+import { StudyPageHero } from "@/components/StudyPageHero";
 import type { KanaMasteryRecord } from "@/types/learning";
 
 type TabMode = "chart" | "quiz" | "pitch" | "minimal";
@@ -321,45 +322,41 @@ export default function KanaPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-primary uppercase tracking-wider">
-            Phase 1 • The Sound & Script Foundation
-          </div>
-          <h1 className="text-2xl font-bold mt-0.5">Kana Dojo & ระบบเสียงญี่ปุ่น</h1>
-          <p className="text-sm text-foreground/70 mt-1">
-            จำอักษรญี่ปุ่นด้วยภาพช่วยจำ (Mnemonics) + ฝึกพิมพ์ Active Recall + เรียนรู้ Pitch Accent ตั้งแต่วันแรก
-          </p>
-        </div>
-
-        {/* Mode Switcher */}
-        <div className="inline-flex rounded-xl border border-border bg-surface p-1 self-start">
-          {[
-            { id: "chart", label: "ตารางอักษร" },
-            { id: "quiz", label: "ฝึกพิมพ์ Recall" },
-            { id: "minimal", label: "แยกเสียง & Dictation" },
-            { id: "pitch", label: "Mora & Pitch 101" },
-          ].map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => {
-                const nextTab = t.id as TabMode;
-                setTab(nextTab);
-                if (nextTab === "quiz") startQuiz(script, group);
-                if (nextTab === "minimal") handlePlayMinimalTarget(pairIdx, targetSide);
-              }}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${tab === t.id
-                ? "bg-primary text-primary-foreground"
-                : "text-foreground/70 hover:text-foreground"
+      <StudyPageHero
+        tone="indigo"
+        kanjiWatermark="仮名"
+        eyebrow="Phase 1 • The Sound & Script Foundation"
+        title="Kana Dojo & ระบบเสียงญี่ปุ่น"
+        subtitle="จำอักษรญี่ปุ่นด้วยภาพช่วยจำ (Mnemonics) + ฝึกพิมพ์ Active Recall + เรียนรู้ Pitch Accent ตั้งแต่วันแรก"
+        actions={
+          <div className="inline-flex flex-wrap rounded-2xl border border-white/20 bg-white/10 p-1 backdrop-blur-xs">
+            {[
+              { id: "chart", label: "ตารางอักษร" },
+              { id: "quiz", label: "ฝึกพิมพ์ Recall" },
+              { id: "minimal", label: "แยกเสียง & Dictation" },
+              { id: "pitch", label: "Mora & Pitch 101" },
+            ].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => {
+                  const nextTab = t.id as TabMode;
+                  setTab(nextTab);
+                  if (nextTab === "quiz") startQuiz(script, group);
+                  if (nextTab === "minimal") handlePlayMinimalTarget(pairIdx, targetSide);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
+                  tab === t.id
+                    ? "bg-white text-[#162947] shadow-xs"
+                    : "text-white/85 hover:bg-white/10"
                 }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {/* Controls for Chart & Quiz */}
       {(tab === "chart" || tab === "quiz") && (

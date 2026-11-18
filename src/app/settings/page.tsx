@@ -19,6 +19,7 @@ import {
   parseReminderHHMM,
   showBrowserStudyNotification,
 } from "@/lib/studyReminder";
+import { StudyPageHero } from "@/components/StudyPageHero";
 import type {
   AiProvider,
   AppSettings,
@@ -157,15 +158,13 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div>
-        <div className="text-xs font-semibold text-primary uppercase tracking-wider">
-          Preferences & Local Data
-        </div>
-        <h1 className="text-2xl font-bold mt-0.5">ตั้งค่าการเรียน & สำรองข้อมูล</h1>
-        <p className="text-sm text-foreground/70 mt-1">
-          ข้อมูลการเรียนและ API Key ทั้งหมดถูกเก็บไว้ในเบราว์เซอร์ของคุณเอง (IndexedDB) ไม่ส่งออกไปเก็บที่เซิร์ฟเวอร์อื่น
-        </p>
-      </div>
+      <StudyPageHero
+        tone="matcha"
+        kanjiWatermark="設定"
+        eyebrow="Preferences & Local Data"
+        title="ตั้งค่าการเรียน & สำรองข้อมูล"
+        subtitle="ข้อมูลการเรียนและ API Key ทั้งหมดถูกเก็บไว้ในเบราว์เซอร์ของคุณเอง (IndexedDB) ไม่ส่งออกไปเก็บที่เซิร์ฟเวอร์อื่น"
+      />
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* FSRS & Study Settings */}

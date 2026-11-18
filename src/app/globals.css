@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #faf8f5;
-  --foreground: #1b2432;
+  --background: #f5f2eb;
+  --foreground: #172030;
   --surface: #ffffff;
-  --surface-muted: #f2efe9;
-  --border: #e4ded3;
-  --primary: #1e3a5f;
+  --surface-muted: #eeeae1;
+  --border: #dcd5c7;
+  --primary: #244780;
   --primary-foreground: #ffffff;
-  --accent: #c84b31;
-  --matcha: #2f6f4e;
-  --gold: #b58328;
+  --accent: #d94638;
+  --matcha: #1a8754;
+  --gold: #d18114;
 }
 
 @theme inline {
@@ -32,30 +32,30 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #0f131a;
-    --foreground: #eceef2;
-    --surface: #171d27;
-    --surface-muted: #202836;
-    --border: #2c3648;
-    --primary: #6c9bd2;
-    --primary-foreground: #0d131c;
-    --accent: #e46f56;
-    --matcha: #53a97b;
-    --gold: #dfb052;
+    --background: #0b101b;
+    --foreground: #edf0f7;
+    --surface: #141c2c;
+    --surface-muted: #1c273d;
+    --border: #2b374f;
+    --primary: #6ca4f2;
+    --primary-foreground: #09101c;
+    --accent: #f07160;
+    --matcha: #4ac48c;
+    --gold: #eab349;
   }
 }
 
 :root[data-theme="dark"] {
-  --background: #0f131a;
-  --foreground: #eceef2;
-  --surface: #171d27;
-  --surface-muted: #202836;
-  --border: #2c3648;
-  --primary: #6c9bd2;
-  --primary-foreground: #0d131c;
-  --accent: #e46f56;
-  --matcha: #53a97b;
-  --gold: #dfb052;
+  --background: #0b101b;
+  --foreground: #edf0f7;
+  --surface: #141c2c;
+  --surface-muted: #1c273d;
+  --border: #2b374f;
+  --primary: #6ca4f2;
+  --primary-foreground: #09101c;
+  --accent: #f07160;
+  --matcha: #4ac48c;
+  --gold: #eab349;
 }
 
 :root[data-theme="light"] {
@@ -68,9 +68,9 @@
 
 body {
   background:
-    radial-gradient(960px 520px at 88% -8%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 70%),
-    radial-gradient(720px 480px at -8% 18%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 72%),
-    radial-gradient(640px 420px at 50% 100%, color-mix(in srgb, var(--gold) 5%, transparent), transparent 70%),
+    radial-gradient(980px 540px at 90% -8%, color-mix(in srgb, var(--primary) 11%, transparent), transparent 68%),
+    radial-gradient(760px 500px at -8% 15%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%),
+    radial-gradient(660px 440px at 55% 100%, color-mix(in srgb, var(--gold) 8%, transparent), transparent 68%),
     var(--background);
   background-attachment: fixed;
   color: var(--foreground);

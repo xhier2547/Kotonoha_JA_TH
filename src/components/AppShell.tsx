@@ -239,14 +239,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex md:w-64 lg:w-72 md:flex-col md:fixed md:inset-y-0 border-r border-border/80 bg-surface/85 backdrop-blur-md z-30">
-        <div className="px-5 py-5 border-b border-border/80 flex items-center gap-3">
+      <aside className="hidden md:flex md:w-64 lg:w-72 md:flex-col md:fixed md:inset-y-0 border-r border-border/80 bg-surface/90 backdrop-blur-md z-30">
+        <div className="relative overflow-hidden px-5 py-5 border-b border-border/80 bg-gradient-to-r from-primary/10 via-accent/5 to-transparent flex items-center gap-3">
           <HankoSealEmblem className="w-10 h-10 shrink-0" />
           <div>
             <div className="font-bold text-base tracking-tight flex items-center gap-1.5">
               <span>Kotonoha Studio</span>
             </div>
-            <div className="text-xs text-foreground/60 font-jp">言の葉スタジオ • Zero to Fluent</div>
+            <div className="text-xs text-foreground/65 font-jp">言の葉スタジオ • Zero to Fluent</div>
           </div>
         </div>
 
@@ -262,8 +262,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 href={item.href}
                 className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   active
-                    ? "bg-primary text-primary-foreground shadow-sm translate-x-0.5"
-                    : "text-foreground/75 hover:bg-surface-muted/80 hover:text-foreground"
+                    ? "bg-gradient-to-r from-primary to-indigo-600 text-white shadow-sm translate-x-0.5"
+                    : "text-foreground/75 hover:bg-surface-muted/85 hover:text-foreground"
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" strokeWidth={1.6} />
