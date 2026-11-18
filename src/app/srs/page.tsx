@@ -62,7 +62,13 @@ import {
   type ImportedCardRow,
 } from "@/lib/deckPortability";
 import { sortFreshCardsByLevel } from "@/lib/studyPlan";
-import type { CardType, SrsCardRecord } from "@/types/learning";
+import { getJlptLevelBadgeStyle } from "@/lib/gamification";
+import {
+  FloatingXpToast,
+  HankoStampBadge,
+  SakuraConfettiBurst,
+} from "@/components/CelebrationEffects";
+import type { CardType, JlptLevel, SrsCardRecord } from "@/types/learning";
 
 type SrsTab = "review" | "curve" | "conjugation" | "particles" | "deck";
 type TypeFilter = "all" | CardType;
@@ -95,6 +101,8 @@ export default function SrsPage() {
   const [previews, setPreviews] = useState<PreviewOption[]>([]);
   const [retention, setRetention] = useState(0.9);
   const [sessionDone, setSessionDone] = useState(0);
+  const [lastXpEarned, setLastXpEarned] = useState(0);
+  const [xpToastKey, setXpToastKey] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Conjugation Trainer State
@@ -254,6 +262,8 @@ export default function SrsPage() {
       emitDbMutated();
 
       setSessionDone((n) => n + 1);
+      setLastXpEarned(rating >= 3 ? 15 : 10);
+      setXpToastKey((k) => k + 1);
       setFlipped(false);
       setTypedAnswer("");
       setTypedResult("idle");
@@ -690,9 +700,18 @@ export default function SrsPage() {
               กำลังโหลดคิวทบทวน FSRS-7...
             </div>
           ) : !currentCard ? (
-            <div className="rounded-2xl border border-border bg-surface p-8 text-center space-y-4 animate-card-enter">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-matcha/15 text-matcha flex items-center justify-center">
-                <CrestSealIcon className="w-8 h-8" />
+            <div className="relative overflow-hidden rounded-2xl border border-matcha/35 bg-gradient-to-br from-matcha/10 via-surface to-amber-500/5 p-8 text-center space-y-4 animate-card-enter shadow-sm">
+              <SakuraConfettiBurst active={sessionDone > 0} />
+              <div className="flex items-center justify-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-matcha/15 text-matcha flex items-center justify-center">
+                  <CrestSealIcon className="w-8 h-8" />
+                </div>
+                {sessionDone > 0 && (
+                  <HankoStampBadge
+                    kanji="完了"
+                    subtitle={`+${sessionDone * 12} XP`}
+                  />
+                )}
               </div>
               <h2 className="text-xl font-bold">เคลียร์คิวทบทวนรอบนี้ครบแล้ว!</h2>
               <p className="text-sm text-foreground/70 max-w-md mx-auto">
@@ -764,7 +783,14 @@ export default function SrsPage() {
                           {currentCard.cardType}
                         </span>
                         {currentCard.tags.slice(0, 2).map((tag) => (
-                          <span key={tag} className="px-2 py-0.5 rounded-md bg-surface-muted">
+                          <span
+                            key={tag}
+                            className={`px-2 py-0.5 rounded-md border ${
+                              /^N[1-5]$/.test(tag)
+                                ? `${getJlptLevelBadgeStyle(tag as JlptLevel)} font-bold`
+                                : "border-transparent bg-surface-muted"
+                            }`}
+                          >
                             {tag}
                           </span>
                         ))}
@@ -784,9 +810,12 @@ export default function SrsPage() {
                           );
                         })()}
                       </div>
-                      <span className="font-mono">
-                        เหลือ {queue.length} ใบ &bull; ผ่าน {sessionDone}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <FloatingXpToast xp={lastXpEarned} eventKey={xpToastKey} />
+                        <span className="font-mono">
+                          เหลือ {queue.length} ใบ &bull; ผ่าน {sessionDone}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Center Prompt */}

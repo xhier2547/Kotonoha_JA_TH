@@ -59,6 +59,11 @@ const {
   searchJmdict,
   searchKanjidic,
 } = require("../.test-dist/lib/openDictServer.js");
+const {
+  computeLearnerProgressStats,
+  getDailyWordHighlight,
+  getJlptLevelBadgeStyle,
+} = require("../.test-dist/lib/gamification.js");
 
 // Check for Unicode emojis while allowing standard JLPT `★` (U+2605) sentence-ordering marker
 const EMOJI_REGEX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{2604}\u{2606}-\u{27BF}]/u;
@@ -582,4 +587,38 @@ test("Open Japanese dataset pipeline serves 20k+ JMdict words, 2.5k+ KANJIDIC2 k
   assert.equal(vgLove.viewBox, 109);
   assert.equal(vgLove.strokes.length, 13);
   assert.ok(vgLove.strokes[0].d.startsWith("M"));
+});
+
+test("XP rank progression, daily word highlight, and JLPT level badge styles", () => {
+  const starter = computeLearnerProgressStats({
+    totalReviews: 0,
+    learnedCount: 0,
+    masteredCount: 0,
+    kanaMasteredCount: 0,
+    completedMinnaCount: 0,
+    jlptAttempts: [],
+    streak: 0,
+  });
+  assert.equal(starter.totalXp, 0);
+  assert.equal(starter.currentRank.level, 1);
+
+  const mid = computeLearnerProgressStats({
+    totalReviews: 50,
+    learnedCount: 30,
+    masteredCount: 15,
+    kanaMasteredCount: 20,
+    completedMinnaCount: 4,
+    jlptAttempts: [{ passed: true }],
+    streak: 5,
+  });
+  assert.ok(mid.totalXp >= 2500);
+  assert.ok(mid.currentRank.level >= 4);
+  assert.ok(mid.progressPct >= 0 && mid.progressPct <= 100);
+
+  const dailyN4 = getDailyWordHighlight("2026-11-18", "N4");
+  assert.ok(dailyN4.word.length > 0);
+  assert.ok(dailyN4.meaningTh.length > 0);
+
+  assert.ok(getJlptLevelBadgeStyle("N5").includes("emerald"));
+  assert.ok(getJlptLevelBadgeStyle("N1").includes("rose"));
 });

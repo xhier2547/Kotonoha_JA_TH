@@ -43,6 +43,11 @@ import { findKanjiMatches, findVocabMatch } from "@/lib/vocabLookup";
 import { translateJaToTh } from "@/lib/localTranslate";
 import { InteractiveJapaneseText } from "@/components/InteractiveJapaneseText";
 import { SpeakButton } from "@/components/SpeakButton";
+import {
+  HankoStampBadge,
+  SakuraConfettiBurst,
+} from "@/components/CelebrationEffects";
+import { getJlptLevelBadgeStyle } from "@/lib/gamification";
 import { CrestSealIcon, FlashcardDeckIcon } from "@/components/LuxuryIcons";
 import {
   getJapaneseSpeechCapabilities,
@@ -682,17 +687,15 @@ export default function JlptPage() {
                 key={lv}
                 type="button"
                 onClick={() => setSelectedLevel(lv)}
-                className={`px-4 py-2.5 rounded-xl border text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                  active
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm -translate-y-0.5"
-                    : "bg-surface border-border text-foreground/80 hover:bg-surface-muted"
-                }`}
+                className={`px-4 py-2.5 rounded-xl border text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${active
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm -translate-y-0.5"
+                  : "bg-surface border-border text-foreground/80 hover:bg-surface-muted"
+                  }`}
               >
                 <span>JLPT {lv}</span>
                 <span
-                  className={`text-[11px] font-normal px-1.5 py-0.5 rounded-md ${
-                    active ? "bg-white/20 text-white" : "bg-surface-muted text-foreground/65"
-                  }`}
+                  className={`text-[11px] font-normal px-1.5 py-0.5 rounded-md ${active ? "bg-white/20 text-white" : "bg-surface-muted text-foreground/65"
+                    }`}
                 >
                   {count} ชุด
                 </span>
@@ -782,23 +785,30 @@ export default function JlptPage() {
             return (
               <div
                 key={exam.id}
-                className={`studio-card animate-fade-up stagger-${(idx % 4) + 1} rounded-2xl border bg-surface p-5 flex flex-col justify-between gap-4 ${
-                  exam.isFullLength
-                    ? "border-primary/45 ring-1 ring-primary/15"
-                    : "border-border"
-                }`}
+                className={`studio-card animate-fade-up stagger-${(idx % 4) + 1} rounded-2xl border bg-surface p-5 flex flex-col justify-between gap-4 ${exam.isFullLength
+                  ? "border-primary/45 ring-1 ring-primary/15"
+                  : "border-border"
+                  }`}
               >
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between gap-2 text-xs">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-md font-semibold ${
-                        exam.isFullLength
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`px-2 py-0.5 rounded-md border font-bold ${getJlptLevelBadgeStyle(
+                          exam.level
+                        )}`}
+                      >
+                        {exam.level}
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-md font-semibold ${exam.isFullLength
                           ? "bg-primary text-primary-foreground"
                           : "bg-primary/10 text-primary"
-                      }`}
-                    >
-                      {exam.isFullLength ? "ฉบับเต็ม Full-Length" : exam.yearLabel}
-                    </span>
+                          }`}
+                      >
+                        {exam.isFullLength ? "ฉบับเต็ม Full-Length" : exam.yearLabel}
+                      </span>
+                    </div>
                     <span className="font-mono text-foreground/60 inline-flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" />
                       {totalQ} ข้อ &bull; {exam.totalMinutes} นาที
@@ -829,11 +839,10 @@ export default function JlptPage() {
 
                   {bestScore !== null && (
                     <div
-                      className={`rounded-xl px-3 py-2 text-xs flex items-center justify-between border ${
-                        hasPassed
-                          ? "bg-matcha/10 border-matcha/30 text-matcha"
-                          : "bg-surface-muted border-border text-foreground/80"
-                      }`}
+                      className={`rounded-xl px-3 py-2 text-xs flex items-center justify-between border ${hasPassed
+                        ? "bg-matcha/10 border-matcha/30 text-matcha"
+                        : "bg-surface-muted border-border text-foreground/80"
+                        }`}
                     >
                       <span className="font-medium">
                         {hasPassed ? "เคยสอบผ่านแล้ว" : "ทำไปแล้ว"}
@@ -925,9 +934,8 @@ export default function JlptPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <div
-                      className={`font-mono font-bold ${
-                        a.passed ? "text-matcha" : "text-accent"
-                      }`}
+                      className={`font-mono font-bold ${a.passed ? "text-matcha" : "text-accent"
+                        }`}
                     >
                       {a.totalScaledScore}/180
                     </div>
@@ -997,11 +1005,10 @@ export default function JlptPage() {
             <button
               type="button"
               onClick={() => setShowFurigana((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                showFurigana
-                  ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                  : "bg-background border-border text-foreground/80 hover:bg-surface-muted"
-              }`}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${showFurigana
+                ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                : "bg-background border-border text-foreground/80 hover:bg-surface-muted"
+                }`}
               title="เปิด-ปิดคำอ่านฮิรางานะเหนือตัวคันจิ"
             >
               {showFurigana ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -1012,11 +1019,10 @@ export default function JlptPage() {
               <button
                 type="button"
                 onClick={() => setRevealTargetKanjiReading((v) => !v)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-medium cursor-pointer ${
-                  revealTargetKanjiReading
-                    ? "bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300"
-                    : "bg-background border-border text-foreground/65"
-                }`}
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-medium cursor-pointer ${revealTargetKanjiReading
+                  ? "bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300"
+                  : "bg-background border-border text-foreground/65"
+                  }`}
                 title="แสดงคำอ่านบนคำถามข้อสอบอ่านคันจิด้วยหรือไม่"
               >
                 <span>{revealTargetKanjiReading ? "เปิดคำตอบคันจิด้วย" : "ซ่อนเฉพาะคำที่ถาม"}</span>
@@ -1084,11 +1090,10 @@ export default function JlptPage() {
                     setSecondsLeft(getSectionMinutes(activeExam, nextSec) * 60);
                   }
                 }}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
-                  sectionFilter === tab.id
-                    ? "bg-foreground text-background"
-                    : "bg-surface-muted/75 text-foreground/75 hover:bg-surface-muted"
-                }`}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer inline-flex items-center gap-1.5 ${sectionFilter === tab.id
+                  ? "bg-foreground text-background"
+                  : "bg-surface-muted/75 text-foreground/75 hover:bg-surface-muted"
+                  }`}
               >
                 <span>{tab.label}</span>
                 <span className="text-[10px] opacity-75 font-mono">
@@ -1102,18 +1107,17 @@ export default function JlptPage() {
 
       {/* Score Report Banner (After Submit) */}
       {submittedReport && (
-        <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-5 animate-card-enter">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <section className="relative overflow-hidden rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-5 animate-card-enter">
+          <SakuraConfettiBurst active={submittedReport.passed} />
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">
-              <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                  submittedReport.passed
-                    ? "bg-matcha/15 text-matcha"
-                    : "bg-accent/15 text-accent"
-                }`}
-              >
-                <CrestSealIcon className="w-6 h-6" />
-              </div>
+              {submittedReport.passed ? (
+                <HankoStampBadge kanji="合格" subtitle="PASSED +350 XP" />
+              ) : (
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-accent/15 text-accent">
+                  <CrestSealIcon className="w-6 h-6" />
+                </div>
+              )}
               <div>
                 <div className="text-xs font-bold uppercase tracking-wider text-foreground/60">
                   JLPT Score Report &bull; {activeExam.level}
@@ -1153,9 +1157,8 @@ export default function JlptPage() {
             <div className="rounded-2xl border border-border bg-background px-5 py-3 text-center shrink-0">
               <div className="text-[11px] text-foreground/60">คะแนนรวมจำลอง</div>
               <div
-                className={`text-3xl font-bold font-mono ${
-                  submittedReport.passed ? "text-matcha" : "text-accent"
-                }`}
+                className={`text-3xl font-bold font-mono ${submittedReport.passed ? "text-matcha" : "text-accent"
+                  }`}
               >
                 {submittedReport.totalScaledScore}
                 <span className="text-sm font-normal text-foreground/50"> / 180</span>
@@ -1172,9 +1175,8 @@ export default function JlptPage() {
                 <div className="flex items-center justify-between gap-2 text-xs">
                   <span className="font-semibold">{sec.labelTh}</span>
                   <span
-                    className={`font-bold text-[11px] ${
-                      sec.sectionPassed ? "text-matcha" : "text-accent"
-                    }`}
+                    className={`font-bold text-[11px] ${sec.sectionPassed ? "text-matcha" : "text-accent"
+                      }`}
                   >
                     {sec.sectionPassed ? "ผ่าน" : `ไม่ถึงขั้นต่ำ (${sec.minRequired})`}
                   </span>
@@ -1189,9 +1191,8 @@ export default function JlptPage() {
                 </div>
                 <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${
-                      sec.sectionPassed ? "bg-matcha" : "bg-accent"
-                    }`}
+                    className={`h-full rounded-full ${sec.sectionPassed ? "bg-matcha" : "bg-accent"
+                      }`}
                     style={{
                       width: `${Math.round((sec.scaledScore / sec.maxScore) * 100)}%`,
                     }}
@@ -1280,8 +1281,8 @@ export default function JlptPage() {
                               onWordClick={handleWordClick}
                               maskTargetReading={Boolean(
                                 q.isKanjiReadingTarget &&
-                                  !revealTargetKanjiReading &&
-                                  !showResult
+                                !revealTargetKanjiReading &&
+                                !showResult
                               )}
                             />
                           </div>
@@ -1290,11 +1291,10 @@ export default function JlptPage() {
                         <button
                           type="button"
                           onClick={() => toggleFlag(q.id)}
-                          className={`p-1.5 rounded-lg border text-xs cursor-pointer shrink-0 ${
-                            isFlagged
-                              ? "bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300"
-                              : "border-border text-foreground/45 hover:text-foreground"
-                          }`}
+                          className={`p-1.5 rounded-lg border text-xs cursor-pointer shrink-0 ${isFlagged
+                            ? "bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300"
+                            : "border-border text-foreground/45 hover:text-foreground"
+                            }`}
                           title="ปักธงไว้กลับมาทวน"
                         >
                           <Flag className="w-3.5 h-3.5" />
@@ -1323,11 +1323,10 @@ export default function JlptPage() {
                                     });
                                   }
                                 }}
-                                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium hover:opacity-95 cursor-pointer ${
-                                  playingQuestionId === q.id
-                                    ? "bg-rose-600 text-white"
-                                    : "bg-primary text-primary-foreground"
-                                }`}
+                                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium hover:opacity-95 cursor-pointer ${playingQuestionId === q.id
+                                  ? "bg-rose-600 text-white"
+                                  : "bg-primary text-primary-foreground"
+                                  }`}
                               >
                                 {playingQuestionId === q.id ? (
                                   <>
@@ -1352,11 +1351,10 @@ export default function JlptPage() {
                                     key={spd.rate}
                                     type="button"
                                     onClick={() => setAudioRate(spd.rate)}
-                                    className={`px-2 py-1 rounded-md cursor-pointer transition-colors ${
-                                      audioRate === spd.rate
-                                        ? "bg-primary text-primary-foreground font-semibold"
-                                        : "text-foreground/70 hover:text-foreground"
-                                    }`}
+                                    className={`px-2 py-1 rounded-md cursor-pointer transition-colors ${audioRate === spd.rate
+                                      ? "bg-primary text-primary-foreground font-semibold"
+                                      : "text-foreground/70 hover:text-foreground"
+                                      }`}
                                   >
                                     {spd.label}
                                   </button>
@@ -1443,11 +1441,10 @@ export default function JlptPage() {
                               className={`rounded-xl border px-3.5 py-2.5 flex items-center gap-2.5 transition-all cursor-pointer select-none ${boxStyle}`}
                             >
                               <span
-                                className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 border ${
-                                  selected
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-surface-muted border-border text-foreground/75"
-                                }`}
+                                className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 border ${selected
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-surface-muted border-border text-foreground/75"
+                                  }`}
                               >
                                 {cIdx + 1}
                               </span>
@@ -1483,11 +1480,10 @@ export default function JlptPage() {
                       {/* Explanation */}
                       {showResult && (
                         <div
-                          className={`rounded-xl p-3 text-xs leading-relaxed border flex items-start gap-2 ${
-                            isCorrect
-                              ? "bg-matcha/10 border-matcha/30 text-foreground/90"
-                              : "bg-accent/10 border-accent/30 text-foreground/90"
-                          }`}
+                          className={`rounded-xl p-3 text-xs leading-relaxed border flex items-start gap-2 ${isCorrect
+                            ? "bg-matcha/10 border-matcha/30 text-foreground/90"
+                            : "bg-accent/10 border-accent/30 text-foreground/90"
+                            }`}
                         >
                           {isCorrect ? (
                             <CheckCircle2 className="w-4 h-4 text-matcha shrink-0 mt-0.5" />

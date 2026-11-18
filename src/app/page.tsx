@@ -10,13 +10,16 @@ import {
   BookMarked,
   BookOpen,
   Brain,
+  Check,
   CheckCircle2,
   Clock,
   Flame,
   Languages,
   MessageCircle,
   Mic,
+  PlusCircle,
   SlidersHorizontal,
+  Sparkles,
   Target,
 } from "lucide-react";
 import {
@@ -24,11 +27,22 @@ import {
   getAppSettings,
   getJlptAttempts,
   getLearningSummary,
+  getLocalDayKey,
+  getMinnaProgressMap,
   getStudyAnalytics,
+  mineCardToSrs,
   type StudyAnalyticsData,
 } from "@/lib/db";
 import { getAuthenticatedUser, getUserDisplayName } from "@/lib/supabase";
 import { computeDailyStudyPlan } from "@/lib/studyPlan";
+import {
+  computeLearnerProgressStats,
+  getDailyWordHighlight,
+  getJlptLevelBadgeStyle,
+  getTimeGreetingJp,
+} from "@/lib/gamification";
+import { DailyGoalRing } from "@/components/CelebrationEffects";
+import { SpeakButton } from "@/components/SpeakButton";
 import { MemoryCurvePanel } from "@/components/MemoryCurvePanel";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { StudyAnalyticsPanel } from "@/components/StudyAnalyticsPanel";
@@ -67,20 +81,33 @@ export default function DashboardPage() {
   const [nowMs, setNowMs] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [accountName, setAccountName] = useState<string | null>(null);
+  const [completedMinnaCount, setCompletedMinnaCount] = useState(0);
+  const [todayKey, setTodayKey] = useState("2026-11-18");
+  const [greeting, setGreeting] = useState({ jp: "こんにちは", th: "สวัสดี" });
+  const [dailyWordAdded, setDailyWordAdded] = useState(false);
 
   useEffect(() => {
     let active = true;
     void (async () => {
-      const [res, allCards, allLogs, attempts, loadedSettings, studyStats, authUser] =
-        await Promise.all([
-          getLearningSummary(),
-          db.cards.toArray(),
-          db.reviewLogs.toArray(),
-          getJlptAttempts(),
-          getAppSettings(),
-          getStudyAnalytics(84),
-          getAuthenticatedUser(),
-        ]);
+      const [
+        res,
+        allCards,
+        allLogs,
+        attempts,
+        minnaMap,
+        loadedSettings,
+        studyStats,
+        authUser,
+      ] = await Promise.all([
+        getLearningSummary(),
+        db.cards.toArray(),
+        db.reviewLogs.toArray(),
+        getJlptAttempts(),
+        getMinnaProgressMap(),
+        getAppSettings(),
+        getStudyAnalytics(84),
+        getAuthenticatedUser(),
+      ]);
       if (!active) return;
       setSummary({
         totalCards: res.totalCards,
@@ -95,10 +122,16 @@ export default function DashboardPage() {
       setCards(allCards);
       setReviewLogs(allLogs);
       setJlptAttempts(attempts);
+      setCompletedMinnaCount(
+        Object.values(minnaMap).filter((m) => m.completed).length
+      );
       setSettings(loadedSettings);
       setAnalytics(studyStats);
       setRetentionTarget(loadedSettings.desiredRetention);
       setNowMs(Date.now());
+      const now = new Date();
+      setTodayKey(getLocalDayKey(now));
+      setGreeting(getTimeGreetingJp(now.getHours()));
       setAccountName(authUser ? getUserDisplayName(authUser) : null);
 
       const requestedOnboarding =
@@ -119,6 +152,40 @@ export default function DashboardPage() {
         kanaMasteredCount: summary?.kanaMasteredCount,
       })
     : null;
+
+  const xpStats = computeLearnerProgressStats({
+    totalReviews: reviewLogs.length,
+    learnedCount: summary?.learnedCount ?? 0,
+    masteredCount: summary?.masteredCount ?? 0,
+    kanaMasteredCount: summary?.kanaMasteredCount ?? 0,
+    completedMinnaCount,
+    jlptAttempts,
+    streak: summary?.streak ?? 0,
+  });
+
+  const dailyWord = getDailyWordHighlight(
+    todayKey,
+    settings?.learnerLevel ?? "N5"
+  );
+  const dailyWordAlreadyInDeck =
+    dailyWordAdded ||
+    cards.some((c) => c.front === dailyWord.word && c.fsrs.reps > 0);
+
+  const handleMineDailyWord = async () => {
+    await mineCardToSrs({
+      front: dailyWord.word,
+      reading: dailyWord.reading,
+      meaningTh: dailyWord.meaningTh,
+      meaningEn: dailyWord.meaningEn,
+      pitch: dailyWord.pitch,
+      exampleSentence: dailyWord.exampleSentence,
+      exampleReading: dailyWord.exampleReading,
+      exampleMeaningTh: dailyWord.exampleMeaningTh,
+      cardType: "vocab",
+      tags: [dailyWord.jlpt, "Kotoba of the Day"],
+    });
+    setDailyWordAdded(true);
+  };
 
   const nextAction = (() => {
     if (!summary) {
@@ -221,64 +288,172 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 animate-fade-up">
-        <div>
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/15 mb-2">
-            <CrestSealIcon className="w-3.5 h-3.5" />
-            <span>Zero to Natural Japanese Fluency</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            สวัสดี! พร้อมฝึกภาษาญี่ปุ่นวันนี้หรือยังครับ{" "}
-            <span className="font-jp-serif text-primary">頑張ろう</span>
-          </h1>
-          <p className="text-sm text-foreground/70 mt-1">
-            ระบบฝึกส่วนตัวครบวงจร: ปูพื้นฐาน Kana &rarr; แฟลชการ์ดตาม Memory Curve &rarr; อ่าน <span className="font-mono">i+1</span> &rarr; พูดเป็นธรรมชาติ
-          </p>
-        </div>
+      {/* Premium Japanese Seigaiha Study Hub Hero */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#162947] via-[#223e6d] to-[#6b2737] bg-seigaiha text-white p-6 sm:p-7 shadow-lg animate-fade-up">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          {/* Left: Greeting + Rank + XP Progress + Actions */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/15 backdrop-blur-xs border border-white/20">
+                <CrestSealIcon className="w-3.5 h-3.5 text-amber-300" />
+                <span>
+                  Lv.{xpStats.currentRank.level} &bull; {xpStats.currentRank.titleJp} (
+                  {xpStats.currentRank.titleTh})
+                </span>
+              </span>
+              {settings?.learnerLevel && (
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-400/20 text-amber-200 border border-amber-300/30">
+                  เป้าหมาย {settings.learnerLevel}
+                </span>
+              )}
+            </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/minna"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 text-sm font-medium transition-all hover:-translate-y-0.5"
-          >
-            <BookMarked className="w-4 h-4" strokeWidth={1.6} />
-            <span>เรียนตามหนังสือ Minna</span>
-          </Link>
-          <Link
-            href="/jlpt"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-sm font-medium transition-all hover:-translate-y-0.5"
-          >
-            <Award className="w-4 h-4 text-primary" strokeWidth={1.6} />
-            <span>ข้อสอบ JLPT N5–N1</span>
-          </Link>
-          <Link
-            href="/shadowing"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-sm font-medium transition-all hover:-translate-y-0.5"
-          >
-            <Mic className="w-4 h-4 text-accent" strokeWidth={1.6} />
-            <span>ฝึก Shadowing</span>
-          </Link>
-          <Link
-            href="/srs"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-sm hover:opacity-95 transition-all hover:-translate-y-0.5"
-          >
-            <FlashcardDeckIcon className="w-4 h-4" />
-            <span>
-              ทบทวนแฟลชการ์ด{summary && summary.dueCount > 0 ? ` (${summary.dueCount})` : ""}
-            </span>
-          </Link>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-snug">
+                <span className="font-jp-serif text-amber-200 mr-2">{greeting.jp}</span>
+                {accountName ? `คุณ${accountName}` : greeting.th} &bull; พร้อมลุยวันนี้ไหม!
+              </h1>
+              <p className="text-xs sm:text-sm text-white/80 mt-1">
+                ทุกการ์ดที่ทบทวน บท Minna และข้อสอบ JLPT จะเพิ่ม XP เพื่อเลื่อนขั้นจาก{" "}
+                <span className="font-jp">初心者</span> สู่ระดับ{" "}
+                <span className="font-jp">師範</span>
+              </p>
+            </div>
+
+            {/* XP Bar */}
+            <div className="rounded-2xl bg-black/20 border border-white/15 p-3.5 space-y-2 backdrop-blur-xs">
+              <div className="flex items-center justify-between text-xs">
+                <span className="inline-flex items-center gap-1.5 font-semibold text-amber-200">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{xpStats.totalXp.toLocaleString()} XP สะสม</span>
+                </span>
+                <span className="text-white/75 font-mono text-[11px]">
+                  {xpStats.nextRank
+                    ? `อีก ${xpStats.xpToNextLevel.toLocaleString()} XP -> ${xpStats.nextRank.titleJp}`
+                    : "สูงสุดระดับ 師範 แล้ว!"}
+                </span>
+              </div>
+              <div className="h-2.5 w-full rounded-full bg-white/15 overflow-hidden">
+                <div
+                  className={`h-full rounded-full bg-gradient-to-r ${xpStats.currentRank.gradientClass} transition-all duration-700`}
+                  style={{ width: `${xpStats.progressPct}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Link
+                href="/srs"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-slate-950 font-bold text-xs sm:text-sm shadow-md hover:brightness-105 transition-all hover:-translate-y-0.5"
+              >
+                <FlashcardDeckIcon className="w-4 h-4" />
+                <span>
+                  ทบทวน FSRS{summary && summary.dueCount > 0 ? ` (${summary.dueCount})` : ""}
+                </span>
+              </Link>
+              <Link
+                href="/minna"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/12 hover:bg-white/20 border border-white/20 text-xs sm:text-sm font-medium transition-colors"
+              >
+                <BookMarked className="w-4 h-4" />
+                <span>Minna 50 บท</span>
+              </Link>
+              <Link
+                href="/jlpt"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/12 hover:bg-white/20 border border-white/20 text-xs sm:text-sm font-medium transition-colors"
+              >
+                <Award className="w-4 h-4 text-amber-300" />
+                <span>ข้อสอบ JLPT</span>
+              </Link>
+              <Link
+                href="/kaiwa"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/12 hover:bg-white/20 border border-white/20 text-xs sm:text-sm font-medium transition-colors"
+              >
+                <Mic className="w-4 h-4 text-rose-300" />
+                <span>AI Kaiwa</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: Daily Goal Ring + Kotoba of the Day */}
+          <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3.5">
+            <div className="rounded-2xl bg-white/10 border border-white/15 p-4 flex items-center gap-4 backdrop-blur-xs">
+              <DailyGoalRing
+                current={summary?.todayReviews ?? 0}
+                target={studyPlan?.reviewTargetCount ?? 25}
+              />
+              <div className="space-y-1 min-w-0">
+                <div className="text-xs font-semibold text-amber-200 uppercase tracking-wider">
+                  Daily Goal Today
+                </div>
+                <div className="text-sm font-bold">
+                  {(summary?.todayReviews ?? 0) >= (studyPlan?.reviewTargetCount ?? 25)
+                    ? "ทำเป้ารายวันครบแล้ว!"
+                    : `เหลืออีก ${Math.max(
+                        0,
+                        (studyPlan?.reviewTargetCount ?? 25) - (summary?.todayReviews ?? 0)
+                      )} ครั้ง`}
+                </div>
+                <div className="text-xs text-white/75">
+                  Streak ต่อเนื่อง {summary?.streak ?? 0} วัน • แผน{" "}
+                  {studyPlan?.dailyMinutes ?? 20} นาที/วัน
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white/10 border border-white/15 p-4 space-y-2 backdrop-blur-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-semibold text-amber-200 uppercase tracking-wider">
+                  Kotoba ประจำวัน &bull; {dailyWord.jlpt}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <SpeakButton text={dailyWord.word} />
+                  <button
+                    type="button"
+                    disabled={dailyWordAlreadyInDeck}
+                    onClick={() => void handleMineDailyWord()}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 disabled:opacity-75 text-[11px] font-semibold cursor-pointer"
+                  >
+                    {dailyWordAlreadyInDeck ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-300" />
+                        <span>ในคลัง</span>
+                      </>
+                    ) : (
+                      <>
+                        <PlusCircle className="w-3 h-3 text-amber-300" />
+                        <span>+ FSRS</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span className="font-jp text-xl font-bold">{dailyWord.word}</span>
+                <span className="font-jp text-xs text-amber-200">{dailyWord.reading}</span>
+                <span className="text-xs text-white/90 font-medium">
+                  — {dailyWord.meaningTh}
+                </span>
+              </div>
+              <div className="text-[11px] text-white/75 truncate font-jp">
+                {dailyWord.exampleSentence}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Stats Grid */}
+      {/* Stats Grid (Color-coded Accents) */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="studio-card animate-fade-up stagger-1 rounded-2xl border border-border bg-surface/90 backdrop-blur-xs p-4 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-foreground/60 mb-1">
+        <div className="studio-card animate-fade-up stagger-1 rounded-2xl border border-border border-t-2 border-t-rose-500 bg-surface/95 backdrop-blur-xs p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-foreground/65 mb-1.5">
             <span>รอทบทวนวันนี้ (Due)</span>
-            <Target className="w-4 h-4 text-accent" strokeWidth={1.6} />
+            <span className="w-7 h-7 rounded-lg bg-rose-500/12 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+              <Target className="w-4 h-4" strokeWidth={1.7} />
+            </span>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold">
+          <div className="text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400">
             {summary ? summary.dueCount : "–"}
           </div>
           <div className="text-xs text-foreground/60 mt-1">
@@ -286,12 +461,14 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="studio-card animate-fade-up stagger-2 rounded-2xl border border-border bg-surface/90 backdrop-blur-xs p-4 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-foreground/60 mb-1">
+        <div className="studio-card animate-fade-up stagger-2 rounded-2xl border border-border border-t-2 border-t-emerald-500 bg-surface/95 backdrop-blur-xs p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-foreground/65 mb-1.5">
             <span>ทบทวนวันนี้</span>
-            <CheckCircle2 className="w-4 h-4 text-matcha" strokeWidth={1.6} />
+            <span className="w-7 h-7 rounded-lg bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" strokeWidth={1.7} />
+            </span>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold">
+          <div className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
             {summary ? summary.todayReviews : "–"}
           </div>
           <div className="text-xs text-foreground/60 mt-1">
@@ -299,12 +476,14 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="studio-card animate-fade-up stagger-3 rounded-2xl border border-border bg-surface/90 backdrop-blur-xs p-4 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-foreground/60 mb-1">
+        <div className="studio-card animate-fade-up stagger-3 rounded-2xl border border-border border-t-2 border-t-indigo-500 bg-surface/95 backdrop-blur-xs p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-foreground/65 mb-1.5">
             <span>คำ/คันจิที่เคยเรียน</span>
-            <Brain className="w-4 h-4 text-primary" strokeWidth={1.6} />
+            <span className="w-7 h-7 rounded-lg bg-indigo-500/12 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <Brain className="w-4 h-4" strokeWidth={1.7} />
+            </span>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold">
+          <div className="text-2xl sm:text-3xl font-bold text-indigo-600 dark:text-indigo-400">
             {summary ? summary.learnedCount : "–"}
           </div>
           <div className="text-xs text-foreground/60 mt-1">
@@ -312,16 +491,27 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="studio-card animate-fade-up stagger-4 rounded-2xl border border-border bg-surface/90 backdrop-blur-xs p-4 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-foreground/60 mb-1">
+        <div className="studio-card animate-fade-up stagger-4 rounded-2xl border border-border border-t-2 border-t-amber-500 bg-surface/95 backdrop-blur-xs p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-foreground/65 mb-1.5">
             <span>ความต่อเนื่อง (Streak)</span>
-            <Flame className="w-4 h-4 text-gold" strokeWidth={1.6} />
+            <span className="w-7 h-7 rounded-lg bg-amber-500/12 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Flame className="w-4 h-4" strokeWidth={1.7} />
+            </span>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold">
+          <div className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400">
             {summary ? `${summary.streak} วัน` : "–"}
           </div>
-          <div className="text-xs text-foreground/60 mt-1">
-            Kana แม่น {summary ? summary.kanaMasteredCount : "–"} ตัว
+          <div className="text-xs text-foreground/60 mt-1 flex items-center justify-between gap-1">
+            <span>Kana แม่น {summary ? summary.kanaMasteredCount : "–"} ตัว</span>
+            {settings?.learnerLevel && (
+              <span
+                className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${getJlptLevelBadgeStyle(
+                  settings.learnerLevel
+                )}`}
+              >
+                {settings.learnerLevel}
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -379,7 +569,7 @@ export default function DashboardPage() {
                   Math.round(
                     ((summary?.todayReviews ?? 0) /
                       Math.max(1, studyPlan.reviewTargetCount)) *
-                      100
+                    100
                   )
                 )}%`,
               }}

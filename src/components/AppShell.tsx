@@ -26,11 +26,18 @@ import {
 } from "@/components/LuxuryIcons";
 import {
   DB_MUTATED_EVENT,
+  db,
   getAppSettings,
+  getJlptAttempts,
   getLearningSummary,
   getLocalDayKey,
+  getMinnaProgressMap,
   saveAppSettings,
 } from "@/lib/db";
+import {
+  computeLearnerProgressStats,
+  type LearnerProgressStats,
+} from "@/lib/gamification";
 import {
   readLastRemindedDayKey,
   shouldTriggerReminderToday,
@@ -101,6 +108,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<ThemePreference>("system");
   const [accountLabel, setAccountLabel] = useState<string | null>(null);
   const [dueCount, setDueCount] = useState<number>(0);
+  const [xpStats, setXpStats] = useState<LearnerProgressStats | null>(null);
   const [syncState, setSyncState] = useState<SyncStatusState>({
     syncing: false,
     lastSyncedAt: null,
@@ -112,15 +120,30 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     const refreshMetricsAndReminder = async () => {
       try {
-        const [s, summary] = await Promise.all([
+        const [s, summary, totalReviews, minnaMap, jlptAttempts] = await Promise.all([
           getAppSettings(),
           getLearningSummary(),
+          db.reviewLogs.count(),
+          getMinnaProgressMap(),
+          getJlptAttempts(),
         ]);
         if (!active) return;
         const pref = s.theme ?? "system";
         setTheme(pref);
         applyThemePreference(pref);
         setDueCount(summary.dueCount);
+        setXpStats(
+          computeLearnerProgressStats({
+            totalReviews,
+            learnedCount: summary.learnedCount,
+            masteredCount: summary.masteredCount,
+            kanaMasteredCount: summary.kanaMasteredCount,
+            completedMinnaCount: Object.values(minnaMap).filter((m) => m.completed)
+              .length,
+            jlptAttempts,
+            streak: summary.streak,
+          })
+        );
         updatePwaAppBadge(summary.dueCount);
 
         const todayKey = getLocalDayKey();
@@ -276,6 +299,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="p-4 m-3 rounded-2xl bg-surface-muted/70 border border-border/80 text-xs space-y-2.5">
+          {xpStats && (
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-primary/10 via-accent/10 to-amber-500/10 border border-primary/20">
+              <span className="font-semibold text-[11px] truncate">
+                <span className="font-jp mr-1 text-primary">{xpStats.currentRank.kanjiSeal}</span>
+                Lv.{xpStats.currentRank.level} {xpStats.currentRank.titleTh}
+              </span>
+              <span className="font-mono font-bold text-[11px] text-amber-600 dark:text-amber-300 shrink-0">
+                {xpStats.totalXp.toLocaleString()} XP
+              </span>
+            </div>
+          )}
           <Link
             href="/auth"
             className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl border border-border/80 bg-surface hover:bg-surface-muted transition-colors"

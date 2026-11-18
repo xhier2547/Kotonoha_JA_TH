@@ -23,6 +23,7 @@
     "src/lib/accountIsolation.ts",
     "src/lib/studyReminder.ts",
     "src/lib/openDictServer.ts",
+    "src/lib/gamification.ts",
     "src/data/coreCurriculum.ts",
     "src/data/strokeOrders.ts",
     "src/data/minnaNoNihongo.ts",

@@ -17,6 +17,7 @@ import { PitchAccentChart } from "@/components/PitchAccentChart";
 import { SpeakButton } from "@/components/SpeakButton";
 import { VocabVisualCard, hasBuiltInVisual } from "@/components/VocabVisualCard";
 import { db, ensureSeeded, mineCardToSrs } from "@/lib/db";
+import { getJlptLevelBadgeStyle } from "@/lib/gamification";
 import type { JlptLevel } from "@/types/learning";
 import type { OpenJmdictEntry, OpenKanjidicEntry } from "@/lib/openDictServer";
 
@@ -415,7 +416,7 @@ export default function DictionaryPage() {
             return (
               <div
                 key={v.id}
-                className="rounded-2xl border border-border bg-surface p-5 space-y-3"
+                className="studio-card rounded-2xl border border-border border-l-4 border-l-primary/70 bg-surface p-5 space-y-3"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -424,9 +425,19 @@ export default function DictionaryPage() {
                       <span className="font-jp text-sm text-primary">{v.reading}</span>
                     </div>
                     <div className="text-sm font-semibold mt-1">{v.meaningTh}</div>
-                    <div className="text-xs text-foreground/55 mt-0.5">
-                      {v.meaningEn ? `${v.meaningEn} • ` : ""}
-                      {v.pos} • {v.jlpt} • <span className="text-primary">{v.sourceLabel}</span>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground/60 mt-1.5">
+                      {v.meaningEn && <span>{v.meaningEn}</span>}
+                      <span className="px-2 py-0.5 rounded-md bg-surface-muted font-medium">
+                        {v.pos}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-md border font-bold text-[11px] ${getJlptLevelBadgeStyle(
+                          v.jlpt
+                        )}`}
+                      >
+                        {v.jlpt}
+                      </span>
+                      <span className="text-primary font-medium">{v.sourceLabel}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -572,7 +583,11 @@ export default function DictionaryPage() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="font-bold text-base">{k.meaningTh}</div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs px-2 py-0.5 rounded bg-surface-muted">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-md border font-bold ${getJlptLevelBadgeStyle(
+                            k.jlpt
+                          )}`}
+                        >
                           {k.jlpt} • {k.strokes} ขีด
                         </span>
                         <button
@@ -674,7 +689,11 @@ export default function DictionaryPage() {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="font-bold text-sm">{k.meaningEn || "-"}</div>
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs px-2 py-0.5 rounded bg-surface-muted">
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-md border font-bold ${getJlptLevelBadgeStyle(
+                                k.jlpt
+                              )}`}
+                            >
                               {k.jlpt} • {k.strokes} ขีด
                             </span>
                             <button
@@ -751,7 +770,11 @@ export default function DictionaryPage() {
                   <span className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-medium">
                     {g.sourceLabel}
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-surface-muted font-medium">
+                  <span
+                    className={`px-2.5 py-1 rounded-lg border font-bold ${getJlptLevelBadgeStyle(
+                      g.jlpt
+                    )}`}
+                  >
                     {g.jlpt}
                   </span>
                 </div>
