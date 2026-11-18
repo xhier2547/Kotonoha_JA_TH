@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
     "onnxruntime-node",
     "sql.js",
   ],
+  outputFileTracingIncludes: {
+    "/api/dictionary": [
+      "src/data/generated/jmdict-common.json",
+      "src/data/generated/kanjidic2.json",
+    ],
+    "/api/kanji-stroke": ["src/data/generated/kanjivg-strokes.json"],
+    "/api/translate": ["src/data/generated/jmdict-common.json"],
+  },
   turbopack: {
     rules: {
       "*.css": {

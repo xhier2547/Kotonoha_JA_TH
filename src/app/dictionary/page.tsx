@@ -18,6 +18,7 @@ import { SpeakButton } from "@/components/SpeakButton";
 import { VocabVisualCard, hasBuiltInVisual } from "@/components/VocabVisualCard";
 import { db, ensureSeeded, mineCardToSrs } from "@/lib/db";
 import type { JlptLevel } from "@/types/learning";
+import type { OpenJmdictEntry, OpenKanjidicEntry } from "@/lib/openDictServer";
 
 type DictTab = "vocab" | "kanji" | "grammar";
 type LevelFilter = "ALL" | JlptLevel;
@@ -67,6 +68,14 @@ export default function DictionaryPage() {
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [userCards, setUserCards] = useState<UnifiedVocabEntry[]>([]);
   const [activeKanjiPractice, setActiveKanjiPractice] = useState<string | null>(null);
+  const [openVocabItems, setOpenVocabItems] = useState<OpenJmdictEntry[]>([]);
+  const [openKanjiItems, setOpenKanjiItems] = useState<OpenKanjidicEntry[]>([]);
+  const [openStats, setOpenStats] = useState<{
+    jmdictCount: number;
+    kanjidicCount: number;
+    kanjivgCount: number;
+  } | null>(null);
+  const [openLoading, setOpenLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -102,6 +111,42 @@ export default function DictionaryPage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (tab === "grammar") return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setOpenLoading(true);
+      const url = `/api/dictionary?tab=${tab}&q=${encodeURIComponent(query.trim())}&level=${levelFilter}&limit=50`;
+      void fetch(url)
+        .then((res) => (res.ok ? res.json() : null))
+        .then(
+          (
+            data: {
+              tab: string;
+              stats?: { jmdictCount: number; kanjidicCount: number; kanjivgCount: number };
+              items?: OpenJmdictEntry[] | OpenKanjidicEntry[];
+            } | null
+          ) => {
+            if (!active || !data) return;
+            if (data.stats) setOpenStats(data.stats);
+            if (data.tab === "vocab" && Array.isArray(data.items)) {
+              setOpenVocabItems(data.items as OpenJmdictEntry[]);
+            } else if (data.tab === "kanji" && Array.isArray(data.items)) {
+              setOpenKanjiItems(data.items as OpenKanjidicEntry[]);
+            }
+          }
+        )
+        .finally(() => {
+          if (active) setOpenLoading(false);
+        });
+    }, 180);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [tab, query, levelFilter]);
 
   const unifiedVocab = useMemo(() => {
     const byKey = new Map<string, UnifiedVocabEntry>();
@@ -253,6 +298,43 @@ export default function DictionaryPage() {
     setAddedIds((prev) => new Set(prev).add(v.id));
   };
 
+  const handleAddOpenKanji = async (k: OpenKanjidicEntry) => {
+    await mineCardToSrs({
+      front: k.kanji,
+      reading: [...k.onyomi, ...k.kunyomi].join(", ") || k.kanji,
+      meaningTh: k.meaningEn || k.kanji,
+      meaningEn: k.meaningEn,
+      mnemonic: `KANJIDIC2 (${k.jlpt} • ${k.strokes} ขีด)`,
+      cardType: "kanji",
+      tags: [k.jlpt, "KANJIDIC2"],
+    });
+    setAddedIds((prev) => new Set(prev).add(`open-k:${k.kanji}`));
+  };
+
+  const mergedOpenVocab = useMemo<UnifiedVocabEntry[]>(() => {
+    if (levelFilter !== "ALL") return [];
+    const localKeys = new Set(unifiedVocab.map((v) => `${v.word}|${v.reading}`));
+    return openVocabItems
+      .filter((item) => !localKeys.has(`${item.word}|${item.reading}`))
+      .map((item, idx) => ({
+        id: `jmdict:${item.word}:${item.reading}:${idx}`,
+        word: item.word,
+        reading: item.reading,
+        meaningTh: item.meaningEn,
+        meaningEn: item.meaningEn,
+        pos: item.pos,
+        jlpt: "N3" as JlptLevel,
+        sourceLabel: "JMdict Common",
+        tags: ["JMdict", item.pos],
+        inUserDeck: false,
+      }));
+  }, [openVocabItems, unifiedVocab, levelFilter]);
+
+  const mergedOpenKanji = useMemo(() => {
+    const coreSet = new Set(CORE_KANJI.map((k) => k.kanji));
+    return openKanjiItems.filter((k) => !coreSet.has(k.kanji));
+  }, [openKanjiItems]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -263,7 +345,10 @@ export default function DictionaryPage() {
           พจนานุกรม คันจิ (Radicals + คัดลายมือ) & ไวยากรณ์
         </h1>
         <p className="text-sm text-foreground/70 mt-1">
-          รวมคำศัพท์หลัก, Minna no Nihongo ครบ 50 บท และการ์ด FSRS ของคุณในที่เดียว พร้อมกรองตามระดับ JLPT
+          รวมหลักสูตรหลัก, Minna 50 บท และพจนานุกรมสากล{" "}
+          {openStats
+            ? `JMdict (${openStats.jmdictCount.toLocaleString()} คำ) • KANJIDIC2 (${openStats.kanjidicCount.toLocaleString()} คันจิ) • KanjiVG (${openStats.kanjivgCount.toLocaleString()} ลำดับขีด)`
+            : "JMdict (22,600+ คำ) • KANJIDIC2 (2,680+ คันจิ) • KanjiVG"}
         </p>
       </div>
 
@@ -403,7 +488,65 @@ export default function DictionaryPage() {
             </div>
           )}
 
-          {filteredVocab.length === 0 && (
+          {mergedOpenVocab.length > 0 && (
+            <>
+              <div className="md:col-span-2 pt-2 border-t border-border/70 flex items-center justify-between text-xs font-semibold text-primary">
+                <span>
+                  ผลจากพจนานุกรมสากล JMdict Common ({mergedOpenVocab.length} รายการ
+                  {query.trim() ? ` สำหรับ "${query.trim()}"` : ""})
+                </span>
+                {openLoading && (
+                  <span className="text-foreground/60 font-normal">กำลังค้นหา...</span>
+                )}
+              </div>
+
+              {mergedOpenVocab.map((v) => {
+                const isAdded = addedIds.has(v.id);
+                return (
+                  <div
+                    key={v.id}
+                    className="rounded-2xl border border-border bg-surface/80 p-5 space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-baseline gap-2">
+                          <span className="font-jp text-2xl font-bold">{v.word}</span>
+                          <span className="font-jp text-sm text-primary">{v.reading}</span>
+                        </div>
+                        <div className="text-sm font-semibold mt-1">{v.meaningEn}</div>
+                        <div className="text-xs text-foreground/55 mt-0.5">
+                          {v.pos} • <span className="text-primary">{v.sourceLabel}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <SpeakButton text={v.word} />
+                        <button
+                          type="button"
+                          onClick={() => void handleAddVocab(v)}
+                          disabled={isAdded}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted disabled:opacity-80 text-xs font-medium cursor-pointer"
+                        >
+                          {isAdded ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-matcha" />
+                              <span className="text-matcha">ใน FSRS</span>
+                            </>
+                          ) : (
+                            <>
+                              <PlusCircle className="w-3.5 h-3.5 text-primary" />
+                              <span>FSRS</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          {filteredVocab.length === 0 && mergedOpenVocab.length === 0 && !openLoading && (
             <div className="md:col-span-2 rounded-2xl border border-border bg-surface p-8 text-center text-sm text-foreground/65">
               ไม่พบคำศัพท์ที่ตรงกับเงื่อนไขการค้นหา ลองเปลี่ยนระดับ JLPT เป็น &ldquo;ทั้งหมด&rdquo; หรือค้นหาด้วยคำอ่าน
             </div>
@@ -502,6 +645,90 @@ export default function DictionaryPage() {
               </div>
             );
           })}
+
+          {mergedOpenKanji.length > 0 && (
+            <>
+              <div className="md:col-span-2 pt-2 border-t border-border/70 flex items-center justify-between text-xs font-semibold text-primary">
+                <span>
+                  ฐานข้อมูลคันจิ KANJIDIC2 + ลำดับขีด KanjiVG ({mergedOpenKanji.length} ตัว
+                  {levelFilter !== "ALL" ? ` • ${levelFilter}` : ""})
+                </span>
+                {openLoading && (
+                  <span className="text-foreground/60 font-normal">กำลังโหลด...</span>
+                )}
+              </div>
+
+              {mergedOpenKanji.map((k) => {
+                const practiceOpen = activeKanjiPractice === k.kanji;
+                const isAdded = addedIds.has(`open-k:${k.kanji}`);
+                return (
+                  <div
+                    key={`open-k:${k.kanji}`}
+                    className="rounded-2xl border border-border bg-surface/85 p-5 space-y-3"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-jp text-4xl font-bold shrink-0">
+                        {k.kanji}
+                      </div>
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="font-bold text-sm">{k.meaningEn || "-"}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs px-2 py-0.5 rounded bg-surface-muted">
+                              {k.jlpt} • {k.strokes} ขีด
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveKanjiPractice(practiceOpen ? null : k.kanji)
+                              }
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-medium cursor-pointer transition-colors ${
+                                practiceOpen
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border bg-background hover:bg-surface-muted"
+                              }`}
+                            >
+                              <PenTool className="w-3 h-3" />
+                              <span>{practiceOpen ? "ปิดกระดาน" : "ฝึกคัด"}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleAddOpenKanji(k)}
+                              disabled={isAdded}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-border bg-background hover:bg-surface-muted text-[11px] font-medium cursor-pointer disabled:opacity-75"
+                            >
+                              {isAdded ? (
+                                <Check className="w-3 h-3 text-matcha" />
+                              ) : (
+                                <PlusCircle className="w-3 h-3 text-primary" />
+                              )}
+                              <span>{isAdded ? "ใน FSRS" : "FSRS"}</span>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="text-xs font-jp text-foreground/80">
+                          On: {k.onyomi.join(", ") || "-"} | Kun:{" "}
+                          {k.kunyomi.join(", ") || "-"}
+                        </div>
+                        <div className="text-[11px] text-foreground/55">
+                          KANJIDIC2 • {k.grade ? `Grade ${k.grade}` : "Joyo/Common"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {practiceOpen && (
+                      <KanaWritingCanvas
+                        key={k.kanji}
+                        char={k.kanji}
+                        strokesCount={k.strokes}
+                        label="ฝึกคัดคันจิ (KanjiVG)"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
       )}
 

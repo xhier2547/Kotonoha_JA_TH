@@ -41,3 +41,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# downloaded raw open-data archives cache (re-built via npm run data:ingest)
+/.cache-data/

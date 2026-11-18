@@ -52,6 +52,13 @@ const {
   parseReminderHHMM,
   shouldTriggerReminderToday,
 } = require("../.test-dist/lib/studyReminder.js");
+const {
+  findExactJmdictWord,
+  getKanjiVgStrokeOrder,
+  getOpenDictStats,
+  searchJmdict,
+  searchKanjidic,
+} = require("../.test-dist/lib/openDictServer.js");
 
 // Check for Unicode emojis while allowing standard JLPT `★` (U+2605) sentence-ordering marker
 const EMOJI_REGEX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{2604}\u{2606}-\u{27BF}]/u;
@@ -550,4 +557,29 @@ test("Daily study reminder scheduler and RFC 5545 ICS calendar export", () => {
   assert.ok(ics.includes("DURATION:PT30M\r\n"));
   assert.ok(ics.includes("URL:https://kotonohajath.vercel.app/srs\r\n"));
   assert.equal(EMOJI_REGEX.test(ics), false);
+});
+
+test("Open Japanese dataset pipeline serves 20k+ JMdict words, 2.5k+ KANJIDIC2 kanji, and KanjiVG strokes", () => {
+  const stats = getOpenDictStats();
+  assert.ok(stats.jmdictCount >= 20000, `Expected >=20k JMdict entries, got ${stats.jmdictCount}`);
+  assert.ok(stats.kanjidicCount >= 2500, `Expected >=2.5k KANJIDIC entries, got ${stats.kanjidicCount}`);
+  assert.ok(stats.kanjivgCount >= 2500, `Expected >=2.5k KanjiVG chars, got ${stats.kanjivgCount}`);
+
+  const exactSmall = findExactJmdictWord("小さい");
+  assert.ok(exactSmall);
+  assert.equal(exactSmall.reading, "ちいさい");
+  assert.ok(exactSmall.meaningEn.toLowerCase().includes("small"));
+
+  const jmdictSearch = searchJmdict({ query: "shinbun", limit: 10 });
+  assert.ok(jmdictSearch.items.some((i) => i.reading === "しんぶん"));
+
+  const kanjiRes = searchKanjidic({ query: "愛", level: "N3", limit: 10 });
+  assert.equal(kanjiRes.items[0]?.kanji, "愛");
+  assert.equal(kanjiRes.items[0]?.strokes, 13);
+
+  const vgLove = getKanjiVgStrokeOrder("愛");
+  assert.ok(vgLove);
+  assert.equal(vgLove.viewBox, 109);
+  assert.equal(vgLove.strokes.length, 13);
+  assert.ok(vgLove.strokes[0].d.startsWith("M"));
 });

@@ -2,9 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Eraser, Eye, EyeOff, PenTool, Play, Square } from "lucide-react";
-import { STROKE_ORDER_MAP } from "@/data/strokeOrders";
+import {
+  STROKE_ORDER_MAP,
+  type CharacterStrokeOrder,
+} from "@/data/strokeOrders";
 
-/** Interactive stroke practice pad with optional animated stroke-order guide for Kana & Kanji. */
+type StrokeOrderWithViewBox = CharacterStrokeOrder & { viewBox?: number };
+const remoteStrokeCache = new Map<string, StrokeOrderWithViewBox | null>();
+
+/** Interactive stroke practice pad with animated stroke-order guide (built-in + 2,850+ KanjiVG). */
 export function KanaWritingCanvas({
   char,
   strokesCount,
@@ -19,8 +25,36 @@ export function KanaWritingCanvas({
   const [hasStrokes, setHasStrokes] = useState(false);
   const [showGhost, setShowGhost] = useState(true);
   const [animStep, setAnimStep] = useState<number | null>(null);
+  const [remoteStroke, setRemoteStroke] = useState<StrokeOrderWithViewBox | null>(
+    () => remoteStrokeCache.get(char) ?? null
+  );
 
-  const strokeOrder = STROKE_ORDER_MAP[char];
+  const builtInStroke = STROKE_ORDER_MAP[char];
+  const strokeOrder: StrokeOrderWithViewBox | undefined =
+    builtInStroke ?? (remoteStroke?.char === char ? remoteStroke : undefined);
+  const viewBoxSize = strokeOrder?.viewBox ?? 100;
+
+  useEffect(() => {
+    if (builtInStroke || !char) return;
+    if (remoteStrokeCache.has(char)) return;
+
+    let active = true;
+    void fetch(`/api/kanji-stroke?char=${encodeURIComponent(char)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: StrokeOrderWithViewBox | null) => {
+        remoteStrokeCache.set(char, data);
+        if (active && data) {
+          setRemoteStroke(data);
+        }
+      })
+      .catch(() => {
+        remoteStrokeCache.set(char, null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [char, builtInStroke]);
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
@@ -178,7 +212,7 @@ export function KanaWritingCanvas({
         {/* Animated Stroke-Order SVG Overlay */}
         {strokeOrder && (
           <svg
-            viewBox="0 0 100 100"
+            viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}
             className="absolute inset-0 w-full h-full pointer-events-none z-0"
             aria-hidden
           >

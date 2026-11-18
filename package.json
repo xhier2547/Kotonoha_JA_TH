@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsc -p tsconfig.test.json && node --test tests/core.test.mjs"
+    "test": "tsc -p tsconfig.test.json && node --test tests/core.test.mjs",
+    "data:ingest": "node scripts/ingest-open-japanese-data.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.2",

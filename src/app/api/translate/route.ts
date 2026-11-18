@@ -1,3 +1,6 @@
+import { findVocabMatch } from "@/lib/vocabLookup";
+import { findExactJmdictWord } from "@/lib/openDictServer";
+
 type TranslationFn = (
   input: string,
   options: { src_lang: string; tgt_lang: string; max_new_tokens: number }
@@ -122,6 +125,20 @@ export async function POST(request: Request) {
     }
 
     const t0 = Date.now();
+    const localThaiHit = findVocabMatch(text, text);
+    const jmdictHit = findExactJmdictWord(text, text);
+
+    if (localThaiHit && localThaiHit.meaningTh) {
+      cache.set(text, localThaiHit.meaningTh);
+      return Response.json({
+        ok: true,
+        translation: localThaiHit.meaningTh,
+        dictEntry: jmdictHit,
+        engine: "local-th-dict",
+        elapsedMs: Date.now() - t0,
+      });
+    }
+
     let translation: string | null = null;
     let engine = "mymemory";
 
@@ -131,7 +148,12 @@ export async function POST(request: Request) {
       translation = null;
     }
 
-    if (!translation) {
+    if (!translation && jmdictHit?.meaningEn) {
+      engine = "jmdict-en";
+      translation = jmdictHit.meaningEn;
+    }
+
+    if (!translation && !process.env.VERCEL) {
       engine = "nllb-cpu-pivot";
       translation = await translateViaLocalPivot(text);
     }
@@ -147,7 +169,13 @@ export async function POST(request: Request) {
     const elapsedMs = Date.now() - t0;
     console.log(`[Translate ${engine}] ms=${elapsedMs} len=${text.length}`);
 
-    return Response.json({ ok: true, translation, engine, elapsedMs });
+    return Response.json({
+      ok: true,
+      translation,
+      dictEntry: jmdictHit,
+      engine,
+      elapsedMs,
+    });
   } catch (error) {
     console.error("Translate error:", error);
     return Response.json(

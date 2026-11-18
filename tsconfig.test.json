@@ -22,6 +22,7 @@
     "src/lib/studyPlan.ts",
     "src/lib/accountIsolation.ts",
     "src/lib/studyReminder.ts",
+    "src/lib/openDictServer.ts",
     "src/data/coreCurriculum.ts",
     "src/data/strokeOrders.ts",
     "src/data/minnaNoNihongo.ts",
