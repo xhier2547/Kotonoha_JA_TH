@@ -15,6 +15,8 @@ import {
 import { SHADOWING_SENTENCES, type ShadowingItem } from "@/data/coreCurriculum";
 import { PitchAccentChart } from "@/components/PitchAccentChart";
 import { StudyPageHero } from "@/components/StudyPageHero";
+import { ShimmerButton } from "@/components/ui21/ShimmerButton";
+import { VoiceWaveOrb } from "@/components/ui21/VoiceWaveOrb";
 import { speakJapanese, startJapaneseRecognition, stopSpeaking } from "@/lib/speech";
 import {
   deleteQueuedShadowing,
@@ -424,23 +426,28 @@ export default function ShadowingPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               {!isRecording ? (
-                <button
+                <ShimmerButton
                   type="button"
                   onClick={startRecording}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accent text-white text-sm font-medium cursor-pointer hover:opacity-95"
+                  shimmerColor="rgba(255, 255, 255, 0.85)"
+                  background="linear-gradient(135deg, #e11d48 0%, #f97316 100%)"
+                  className="px-5 py-2.5 text-sm font-semibold"
                 >
                   <Mic className="w-4 h-4" />
                   <span>เริ่มอัดเสียงพูด</span>
-                </button>
+                </ShimmerButton>
               ) : (
-                <button
-                  type="button"
-                  onClick={stopRecording}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-medium animate-pulse cursor-pointer"
-                >
-                  <Square className="w-4 h-4" />
-                  <span>หยุดอัดเสียง</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={stopRecording}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-medium cursor-pointer hover:brightness-105"
+                  >
+                    <Square className="w-4 h-4" />
+                    <span>หยุดอัดเสียง</span>
+                  </button>
+                  <VoiceWaveOrb active tone="rose" label="กำลังบันทึกเสียงพูด..." />
+                </div>
               )}
 
               {recordedUrl && (

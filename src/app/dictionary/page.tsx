@@ -17,6 +17,7 @@ import { PitchAccentChart } from "@/components/PitchAccentChart";
 import { SpeakButton } from "@/components/SpeakButton";
 import { VocabVisualCard, hasBuiltInVisual } from "@/components/VocabVisualCard";
 import { StudyPageHero } from "@/components/StudyPageHero";
+import { SlideTabs } from "@/components/ui21/SlideTabs";
 import { db, ensureSeeded, mineCardToSrs } from "@/lib/db";
 import { getJlptLevelBadgeStyle } from "@/lib/gamification";
 import type { JlptLevel } from "@/types/learning";
@@ -365,44 +366,26 @@ export default function DictionaryPage() {
             />
           </div>
 
-          <div className="inline-flex rounded-xl border border-border bg-surface p-1 self-start">
-            {[
-              { id: "vocab", label: `คำศัพท์ (${filteredVocab.length})` },
-              { id: "kanji", label: `คันจิ (${filteredKanji.length})` },
-              { id: "grammar", label: `ไวยากรณ์ (${filteredGrammar.length})` },
-            ].map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id as DictTab)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  tab === t.id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground/70 hover:text-foreground"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <SlideTabs<DictTab>
+            value={tab}
+            onChange={setTab}
+            className="self-start"
+            items={[
+              { id: "vocab", label: "คำศัพท์", badge: filteredVocab.length },
+              { id: "kanji", label: "คันจิ", badge: filteredKanji.length },
+              { id: "grammar", label: "ไวยากรณ์", badge: filteredGrammar.length },
+            ]}
+          />
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-foreground/60 mr-1">ระดับ JLPT:</span>
-          {LEVEL_FILTERS.map((lv) => (
-            <button
-              key={lv.id}
-              type="button"
-              onClick={() => setLevelFilter(lv.id)}
-              className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
-                levelFilter === lv.id
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-surface text-foreground/65 hover:text-foreground"
-              }`}
-            >
-              {lv.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-foreground/60">ระดับ JLPT:</span>
+          <SlideTabs<LevelFilter>
+            value={levelFilter}
+            onChange={setLevelFilter}
+            size="sm"
+            items={LEVEL_FILTERS.map((lv) => ({ id: lv.id, label: lv.label }))}
+          />
         </div>
       </div>
 

@@ -43,6 +43,9 @@ import {
 } from "@/lib/gamification";
 import { DailyGoalRing } from "@/components/CelebrationEffects";
 import { SpeakButton } from "@/components/SpeakButton";
+import { NumberTicker } from "@/components/ui21/NumberTicker";
+import { ShimmerButton } from "@/components/ui21/ShimmerButton";
+import { SpotlightCard } from "@/components/ui21/SpotlightCard";
 import { MemoryCurvePanel } from "@/components/MemoryCurvePanel";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { StudyAnalyticsPanel } from "@/components/StudyAnalyticsPanel";
@@ -329,7 +332,9 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between text-xs">
                 <span className="inline-flex items-center gap-1.5 font-semibold text-amber-200">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>{xpStats.totalXp.toLocaleString()} XP สะสม</span>
+                  <span>
+                    <NumberTicker value={xpStats.totalXp} /> XP สะสม
+                  </span>
                 </span>
                 <span className="text-white/75 font-mono text-[11px]">
                   {xpStats.nextRank
@@ -347,15 +352,17 @@ export default function DashboardPage() {
 
             {/* Quick Action Buttons */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Link
+              <ShimmerButton
                 href="/srs"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-rose-500 text-slate-950 font-bold text-xs sm:text-sm shadow-md hover:brightness-105 transition-all hover:-translate-y-0.5"
+                shimmerColor="rgba(255, 248, 220, 0.9)"
+                background="linear-gradient(135deg, #f59e0b 0%, #f43f5e 100%)"
+                className="font-bold text-xs sm:text-sm text-white shadow-md"
               >
                 <FlashcardDeckIcon className="w-4 h-4" />
                 <span>
                   ทบทวน FSRS{summary && summary.dueCount > 0 ? ` (${summary.dueCount})` : ""}
                 </span>
-              </Link>
+              </ShimmerButton>
               <Link
                 href="/minna"
                 className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/12 hover:bg-white/20 border border-white/20 text-xs sm:text-sm font-medium transition-colors"
@@ -448,9 +455,12 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Stats Grid (Color-coded Accents) */}
+      {/* Stats Grid (21st.dev Spotlight Bento Cards + NumberTicker) */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="studio-card animate-fade-up stagger-1 rounded-2xl border border-border border-t-2 border-t-rose-500 bg-surface/95 backdrop-blur-xs p-4 shadow-xs">
+        <SpotlightCard
+          tone="rose"
+          className="animate-fade-up stagger-1 border-t-2 border-t-rose-500 p-4"
+        >
           <div className="flex items-center justify-between text-xs text-foreground/65 mb-1.5">
             <span>รอทบทวนวันนี้ (Due)</span>
             <span className="w-7 h-7 rounded-lg bg-rose-500/12 text-rose-600 dark:text-rose-400 flex items-center justify-center">
@@ -458,14 +468,17 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400">
-            {summary ? summary.dueCount : "–"}
+            {summary ? <NumberTicker value={summary.dueCount} /> : "–"}
           </div>
           <div className="text-xs text-foreground/60 mt-1">
             การ์ดใหม่พร้อมเรียน {summary ? summary.newCount : "–"} ใบ
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="studio-card animate-fade-up stagger-2 rounded-2xl border border-border border-t-2 border-t-emerald-500 bg-surface/95 backdrop-blur-xs p-4 shadow-xs">
+        <SpotlightCard
+          tone="emerald"
+          className="animate-fade-up stagger-2 border-t-2 border-t-emerald-500 p-4"
+        >
           <div className="flex items-center justify-between text-xs text-foreground/65 mb-1.5">
             <span>ทบทวนวันนี้</span>
             <span className="w-7 h-7 rounded-lg bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -473,14 +486,17 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-            {summary ? summary.todayReviews : "–"}
+            {summary ? <NumberTicker value={summary.todayReviews} /> : "–"}
           </div>
           <div className="text-xs text-foreground/60 mt-1">
             จำได้คล่องแล้ว {summary ? summary.masteredCount : "–"} ใบ
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="studio-card animate-fade-up stagger-3 rounded-2xl border border-border border-t-2 border-t-indigo-500 bg-surface/95 backdrop-blur-xs p-4 shadow-xs">
+        <SpotlightCard
+          tone="indigo"
+          className="animate-fade-up stagger-3 border-t-2 border-t-indigo-500 p-4"
+        >
           <div className="flex items-center justify-between text-xs text-foreground/65 mb-1.5">
             <span>คำ/คันจิที่เคยเรียน</span>
             <span className="w-7 h-7 rounded-lg bg-indigo-500/12 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -488,14 +504,17 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-indigo-600 dark:text-indigo-400">
-            {summary ? summary.learnedCount : "–"}
+            {summary ? <NumberTicker value={summary.learnedCount} /> : "–"}
           </div>
           <div className="text-xs text-foreground/60 mt-1">
             จากคลังทั้งหมด {summary ? summary.totalCards : "–"} ใบ
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div className="studio-card animate-fade-up stagger-4 rounded-2xl border border-border border-t-2 border-t-amber-500 bg-surface/95 backdrop-blur-xs p-4 shadow-xs">
+        <SpotlightCard
+          tone="amber"
+          className="animate-fade-up stagger-4 border-t-2 border-t-amber-500 p-4"
+        >
           <div className="flex items-center justify-between text-xs text-foreground/65 mb-1.5">
             <span>ความต่อเนื่อง (Streak)</span>
             <span className="w-7 h-7 rounded-lg bg-amber-500/12 text-amber-600 dark:text-amber-400 flex items-center justify-center">
@@ -503,7 +522,7 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400">
-            {summary ? `${summary.streak} วัน` : "–"}
+            {summary ? <NumberTicker value={summary.streak} suffix=" วัน" /> : "–"}
           </div>
           <div className="text-xs text-foreground/60 mt-1 flex items-center justify-between gap-1">
             <span>Kana แม่น {summary ? summary.kanaMasteredCount : "–"} ตัว</span>
@@ -517,7 +536,7 @@ export default function DashboardPage() {
               </span>
             )}
           </div>
-        </div>
+        </SpotlightCard>
       </section>
 
       {/* Personalized Daily Study Plan */}

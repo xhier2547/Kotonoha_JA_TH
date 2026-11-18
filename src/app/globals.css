@@ -284,6 +284,95 @@ ruby rt {
   border-radius: 9999px;
 }
 
+@keyframes shimmer-slide {
+  to {
+    transform: translate(calc(100cqw - 100%), 0);
+  }
+}
+
+@keyframes spin-around {
+  0% {
+    transform: translateZ(0) rotate(0deg);
+  }
+  15%,
+  35% {
+    transform: translateZ(0) rotate(90deg);
+  }
+  65%,
+  85% {
+    transform: translateZ(0) rotate(270deg);
+  }
+  100% {
+    transform: translateZ(0) rotate(360deg);
+  }
+}
+
+.animate-shimmer-slide {
+  animation: shimmer-slide var(--speed, 3.2s) ease-in-out infinite alternate;
+}
+
+.animate-spin-around {
+  animation: spin-around calc(var(--speed, 3.2s) * 2) infinite linear;
+}
+
+@keyframes wensity-text-shimmer-fwd {
+  0% {
+    background-position: 105% center, 0 0;
+  }
+  100% {
+    background-position: -5% center, 0 0;
+  }
+}
+
+@keyframes wensity-text-shimmer-rev {
+  0% {
+    background-position: -5% center, 0 0;
+  }
+  100% {
+    background-position: 105% center, 0 0;
+  }
+}
+
+.wensity-text-shimmer {
+  animation-name: wensity-text-shimmer-fwd;
+  animation-duration: var(--wensity-shimmer-duration, 2.2s);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  animation-play-state: running;
+  animation-direction: normal;
+}
+
+.wensity-text-shimmer[data-shimmer-direction="right"] {
+  animation-name: wensity-text-shimmer-rev;
+}
+
+.wensity-text-shimmer[data-shimmer-yoyo="true"] {
+  animation-direction: alternate;
+}
+
+.wensity-text-shimmer[data-shimmer-direction="right"][data-shimmer-yoyo="true"] {
+  animation-direction: alternate-reverse;
+}
+
+.wensity-text-shimmer[data-shimmer-paused="true"] {
+  animation-play-state: paused;
+}
+
+@keyframes voiceBarPulse {
+  0%,
+  100% {
+    transform: scaleY(0.42);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-voice-bar {
+  animation: voiceBarPulse 0.85s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
   .animate-card-enter,
@@ -291,9 +380,18 @@ ruby rt {
   .animate-pulse-ring,
   .animate-stamp-slam,
   .animate-xp-pop,
-  .animate-petal {
+  .animate-petal,
+  .animate-shimmer-slide,
+  .animate-spin-around,
+  .animate-voice-bar {
     animation: none !important;
     stroke-dashoffset: 0 !important;
+  }
+  .wensity-text-shimmer {
+    animation: none !important;
+    background-image: none !important;
+    -webkit-text-fill-color: var(--wensity-shimmer-hi) !important;
+    color: var(--wensity-shimmer-hi);
   }
   .flashcard-inner,
   .studio-card {

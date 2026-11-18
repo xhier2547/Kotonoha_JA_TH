@@ -28,6 +28,7 @@ import { PitchAccentChart } from "@/components/PitchAccentChart";
 import { SpeakButton } from "@/components/SpeakButton";
 import { VocabVisualCard, hasBuiltInVisual } from "@/components/VocabVisualCard";
 import { StudyPageHero } from "@/components/StudyPageHero";
+import { TextShimmer } from "@/components/ui21/TextShimmer";
 import {
   compressImageFileToDataUrl,
   extractImageFromClipboard,
@@ -429,7 +430,16 @@ export default function ReaderPage() {
             className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-50 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>{aiLoading ? "กำลังแต่งเรื่อง..." : "ให้ AI แต่งเรื่อง i+1"}</span>
+            {aiLoading ? (
+              <TextShimmer
+                text="กำลังแต่งเรื่อง i+1..."
+                baseColor="color-mix(in srgb, var(--background) 65%, transparent)"
+                shimmerColor="var(--background)"
+                className="text-xs font-medium"
+              />
+            ) : (
+              <span>ให้ AI แต่งเรื่อง i+1</span>
+            )}
           </button>
         </div>
         {aiError && (

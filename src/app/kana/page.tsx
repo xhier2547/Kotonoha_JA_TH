@@ -10,6 +10,7 @@ import { PitchAccentChart } from "@/components/PitchAccentChart";
 import { SpeakButton } from "@/components/SpeakButton";
 import { KanaWritingCanvas } from "@/components/KanaWritingCanvas";
 import { StudyPageHero } from "@/components/StudyPageHero";
+import { SlideTabs } from "@/components/ui21/SlideTabs";
 import type { KanaMasteryRecord } from "@/types/learning";
 
 type TabMode = "chart" | "quiz" | "pitch" | "minimal";
@@ -329,32 +330,21 @@ export default function KanaPage() {
         title="Kana Dojo & ระบบเสียงญี่ปุ่น"
         subtitle="จำอักษรญี่ปุ่นด้วยภาพช่วยจำ (Mnemonics) + ฝึกพิมพ์ Active Recall + เรียนรู้ Pitch Accent ตั้งแต่วันแรก"
         actions={
-          <div className="inline-flex flex-wrap rounded-2xl border border-white/20 bg-white/10 p-1 backdrop-blur-xs">
-            {[
+          <SlideTabs<TabMode>
+            variant="hero"
+            value={tab}
+            onChange={(nextTab) => {
+              setTab(nextTab);
+              if (nextTab === "quiz") startQuiz(script, group);
+              if (nextTab === "minimal") handlePlayMinimalTarget(pairIdx, targetSide);
+            }}
+            items={[
               { id: "chart", label: "ตารางอักษร" },
               { id: "quiz", label: "ฝึกพิมพ์ Recall" },
               { id: "minimal", label: "แยกเสียง & Dictation" },
               { id: "pitch", label: "Mora & Pitch 101" },
-            ].map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => {
-                  const nextTab = t.id as TabMode;
-                  setTab(nextTab);
-                  if (nextTab === "quiz") startQuiz(script, group);
-                  if (nextTab === "minimal") handlePlayMinimalTarget(pairIdx, targetSide);
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
-                  tab === t.id
-                    ? "bg-white text-[#162947] shadow-xs"
-                    : "text-white/85 hover:bg-white/10"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+            ]}
+          />
         }
       />
 

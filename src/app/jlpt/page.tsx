@@ -49,6 +49,8 @@ import {
 import { getJlptLevelBadgeStyle } from "@/lib/gamification";
 import { CrestSealIcon, FlashcardDeckIcon } from "@/components/LuxuryIcons";
 import { StudyPageHero } from "@/components/StudyPageHero";
+import { NumberTicker } from "@/components/ui21/NumberTicker";
+import { SpotlightCard } from "@/components/ui21/SpotlightCard";
 import {
   getJapaneseSpeechCapabilities,
   speakJapanese,
@@ -1146,16 +1148,19 @@ export default function JlptPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-background px-5 py-3 text-center shrink-0">
+            <SpotlightCard
+              tone={submittedReport.passed ? "emerald" : "rose"}
+              className="px-5 py-3 text-center shrink-0"
+            >
               <div className="text-[11px] text-foreground/60">คะแนนรวมจำลอง</div>
               <div
                 className={`text-3xl font-bold font-mono ${submittedReport.passed ? "text-matcha" : "text-accent"
                   }`}
               >
-                {submittedReport.totalScaledScore}
+                <NumberTicker value={submittedReport.totalScaledScore} />
                 <span className="text-sm font-normal text-foreground/50"> / 180</span>
               </div>
-            </div>
+            </SpotlightCard>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

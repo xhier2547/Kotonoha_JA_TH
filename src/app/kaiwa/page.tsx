@@ -38,6 +38,8 @@ import { PitchAccentChart } from "@/components/PitchAccentChart";
 import { SpeakButton } from "@/components/SpeakButton";
 import { VocabVisualCard, hasBuiltInVisual } from "@/components/VocabVisualCard";
 import { StudyPageHero } from "@/components/StudyPageHero";
+import { TextShimmer } from "@/components/ui21/TextShimmer";
+import { VoiceWaveOrb } from "@/components/ui21/VoiceWaveOrb";
 import { startGeminiLiveSession, type GeminiLiveSession } from "@/lib/geminiLive";
 import {
   fetchJapaneseReading,
@@ -1194,15 +1196,16 @@ export default function KaiwaPage() {
           </div>
 
           {liveStatus !== "idle" && (
-            <div className="px-4 py-2 bg-rose-500/10 border-b border-rose-500/20 flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-medium">
-                <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
-                <span>
-                  {liveStatus === "connecting"
+            <div className="px-4 py-2 bg-rose-500/10 border-b border-rose-500/20 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <VoiceWaveOrb
+                active={liveStatus === "connected" || liveStatus === "connecting"}
+                tone="rose"
+                label={
+                  liveStatus === "connecting"
                     ? `กำลังเชื่อมต่อ ${liveModelName || "Gemini Live"}...`
-                    : `Gemini Live เสียงสดเชื่อมต่อแล้ว (${liveModelName}) • พูดได้เลย`}
-                </span>
-              </div>
+                    : `Gemini Live เสียงสดเชื่อมต่อแล้ว (${liveModelName}) • พูดได้เลย`
+                }
+              />
               {liveStatus === "connected" && (
                 <button
                   type="button"
@@ -1380,8 +1383,12 @@ export default function KaiwaPage() {
               </div>
             )}
             {loading && (
-              <div className="text-xs text-foreground/60 italic px-2">
-                คู่สนทนากำลังคิดคำตอบ... ({loadingSec}s)
+              <div className="px-2 py-1 flex items-center gap-2">
+                <VoiceWaveOrb active tone="indigo" />
+                <TextShimmer
+                  text={`คู่สนทนากำลังคิดคำตอบ... (${loadingSec}s)`}
+                  className="text-xs font-medium"
+                />
               </div>
             )}
             <div ref={bottomRef} />

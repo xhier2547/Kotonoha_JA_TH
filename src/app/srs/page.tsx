@@ -69,6 +69,7 @@ import {
   SakuraConfettiBurst,
 } from "@/components/CelebrationEffects";
 import { StudyPageHero } from "@/components/StudyPageHero";
+import { SlideTabs } from "@/components/ui21/SlideTabs";
 import type { CardType, JlptLevel, SrsCardRecord } from "@/types/learning";
 
 type SrsTab = "review" | "curve" | "conjugation" | "particles" | "deck";
@@ -583,32 +584,18 @@ export default function SrsPage() {
         title="คลังสมอง FSRS & ฝึกผันกริยา"
         subtitle="ทบทวนศัพท์ คันจิ ไวยากรณ์ และประโยคด้วยอัลกอริทึม FSRS-7 + ฝึกผันกริยาให้คล่องปาก"
         actions={
-          <div className="inline-flex flex-wrap rounded-2xl border border-white/20 bg-white/10 p-1 backdrop-blur-xs">
-            {[
+          <SlideTabs<SrsTab>
+            variant="hero"
+            value={tab}
+            onChange={setTab}
+            items={[
               { id: "review", label: "ทบทวนแฟลชการ์ด", icon: FlashcardDeckIcon },
               { id: "curve", label: "Memory Curve", icon: MemoryCurveIcon },
               { id: "conjugation", label: "ฝึกผันกริยา", icon: Dumbbell },
               { id: "particles", label: "ฝึกคำช่วย (助詞)", icon: ListChecks },
               { id: "deck", label: "คลังการ์ด", icon: BookMarked },
-            ].map((t) => {
-              const Icon = t.icon;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTab(t.id as SrsTab)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                    tab === t.id
-                      ? "bg-white text-[#2d1e57] shadow-xs"
-                      : "text-white/85 hover:bg-white/10"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{t.label}</span>
-                </button>
-              );
-            })}
-          </div>
+            ]}
+          />
         }
       />
 
